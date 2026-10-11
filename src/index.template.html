@@ -11,6 +11,7 @@
   --accent:#c2410c; --accent-ink:#ffffff; --star:#d97706;
   --good:#15803d; --ing:#b45309; --fail:#b91c1c; --not:#6b7280;
   --ok-bg:#e8f5ec; --no-bg:#fdecec;
+  --scale:1;
 }
 @media (prefers-color-scheme: dark){
   :root{ color-scheme:dark;
@@ -26,7 +27,7 @@ html,body{margin:0;min-height:100%}
 body{background:var(--bg);color:var(--ink);font-family:"Noto Sans KR","Apple SD Gothic Neo",system-ui,sans-serif;
   display:flex;flex-direction:column;align-items:center;padding:16px 16px 20px;min-height:100vh}
 .jp{font-family:"Noto Sans JP","Hiragino Sans","Hiragino Kaku Gothic ProN",sans-serif}
-.wrap{width:100%;max-width:780px;display:flex;flex-direction:column;gap:12px}
+.wrap{width:100%;max-width:calc(780px * var(--scale));display:flex;flex-direction:column;gap:12px}
 button{font:inherit;color:inherit}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
@@ -70,14 +71,17 @@ select{padding:7px 9px;border:1px solid var(--line);border-radius:8px;background
 .star.on{color:var(--star)}
 .wrongtag{font-size:11px;color:var(--fail);border:1px solid var(--fail);border-radius:6px;padding:1px 6px;margin-left:6px}
 .head{text-align:center;margin:26px 0 6px}
-.word{font-weight:700;font-size:clamp(52px,12vw,104px);line-height:1.1;letter-spacing:.02em;word-break:keep-all}
-.kana{font-size:clamp(20px,4.5vw,28px);color:var(--accent);margin-top:10px;font-weight:500}
-.pron{font-size:16px;color:var(--sub);margin-top:4px}
-.meaning{text-align:center;font-size:clamp(22px,5vw,32px);font-weight:700;margin:20px 0 4px}
+.word{font-weight:700;font-size:calc(clamp(52px,12vw,104px) * var(--scale));line-height:1.1;letter-spacing:.02em;white-space:nowrap}
+.kana{font-size:calc(clamp(20px,4.5vw,28px) * var(--scale));color:var(--accent);margin-top:10px;font-weight:500}
+.pron{font-size:calc(16px * var(--scale));color:var(--sub);margin-top:4px}
+.meaning{text-align:center;font-size:calc(clamp(22px,5vw,32px) * var(--scale));font-weight:700;margin:20px 0 4px}
 .ex{border-top:1px solid var(--line);margin-top:22px;padding-top:16px;text-align:center}
-.ex .j{font-size:18px}
-.ex .k{font-size:14px;color:var(--sub);margin-top:6px}
+.ex .j{font-size:calc(18px * var(--scale));cursor:pointer}
+.ex .k{font-size:calc(14px * var(--scale));color:var(--sub);margin-top:6px}
 .memo{font-size:12px;color:var(--sub);text-align:center;margin-top:12px}
+.rec{font-size:12px;color:var(--sub);text-align:center;margin-top:14px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:3px}
+.d-ok{background:var(--good)} .d-half{background:var(--ing)} .d-no{background:var(--fail)}
 .hidden .reveal{visibility:hidden}
 .hint-reveal{display:none;text-align:center;color:var(--sub);font-size:14px}
 .hidden .hint-reveal{display:block}
@@ -101,6 +105,12 @@ th{background:var(--soft);font-weight:500;color:var(--sub);font-size:12px;positi
 tr.ok td{background:var(--ok-bg)} tr.no td{background:var(--no-bg)}
 td.w{font-size:16px;font-weight:700}
 .mine{color:var(--ink)} .corr{color:var(--sub);font-size:12px}
+/* list */
+.search{flex:1;min-width:180px;padding:8px 11px;border:1px solid var(--line);border-radius:8px;background:var(--soft);color:var(--ink);font:inherit}
+.tbl.tall{max-height:68vh;overflow:auto}
+tr.pick{cursor:pointer} tr.pick:hover td{background:var(--soft)}
+td .badge{margin-left:0;white-space:nowrap} td .star{font-size:16px;padding:0}
+#list th,#lBody td{white-space:nowrap} #lBody td.mn{white-space:normal;min-width:130px}
 .ox{display:flex;gap:4px}
 .ox button{border:1px solid var(--line);background:var(--card);border-radius:7px;padding:3px 8px;cursor:pointer;font-size:12px;font-weight:700;color:var(--sub)}
 .ox button.onO{background:var(--good);border-color:var(--good);color:#fff}
@@ -113,9 +123,11 @@ td.w{font-size:16px;font-weight:700}
   <div class="bar">
     <div class="tabs">
       <button class="tab" id="tabStudy">학습</button>
+      <button class="tab" id="tabList">목록</button>
       <button class="tab" id="tabTest">테스트</button>
     </div>
     <div class="row">
+      <button class="chip" id="sizeBtn" title="+ / −"></button>
       <button class="chip" id="scopeBtn">범위 설정</button>
       <button class="chip" id="importBtn">불러오기</button>
     </div>
@@ -123,12 +135,34 @@ td.w{font-size:16px;font-weight:700}
 
   <div class="panel" id="scopePanel" hidden>
     <h3>볼 단어 고르기</h3>
-    <div class="row" style="gap:18px;align-items:flex-end">
-      <div class="field"><label for="fFrom">번호 범위</label>
-        <div class="row"><input class="num" id="fFrom" type="number" min="1"> ~ <input class="num" id="fTo" type="number" min="1"></div></div>
-      <div class="field"><label for="fTopic">주제</label><select id="fTopic"></select></div>
-    </div>
+    <div class="field"><label for="fFrom">번호 범위</label>
+      <div class="row"><input class="num" id="fFrom" type="number" min="1"> ~ <input class="num" id="fTo" type="number" min="1">
+        <button class="chip" id="fPrevChunk">◀ 이전 묶음</button><button class="chip" id="fNextChunk">다음 묶음 ▶</button><button class="chip" id="fAll">전체</button></div></div>
+    <div class="field"><span class="lbl">주제 (선택 안 하면 전체)</span><div class="row" id="fTopics"></div></div>
     <div class="field"><span class="lbl">학습상태 (선택 안 하면 전체)</span><div class="row" id="fStatus"></div></div>
+    <div class="row" style="gap:18px;align-items:flex-end">
+      <div class="field"><label for="fExam">기출</label><select id="fExam">
+        <option value="">전체</option>
+        <option value="any">기출 단어만</option>
+        <option value="multi">2회 이상 출제</option>
+        <option value="recent">최근 3년 출제</option>
+        <option value="none">기출 아닌 단어만</option>
+      </select></div>
+      <div class="field"><label for="fKind">표기</label><select id="fKind">
+        <option value="">전체</option>
+        <option value="kanji">한자 있는 단어</option>
+        <option value="kana">가나만 있는 단어</option>
+      </select></div>
+      <div class="field"><label for="fHist">테스트 기록</label><select id="fHist">
+        <option value="">전체</option>
+        <option value="never">한 번도 테스트 안 함</option>
+        <option value="weak">취약 (정답률 50% 이하 · 2회 연속 오답)</option>
+        <option value="pron">최근 발음만 틀림</option>
+        <option value="mean">최근 뜻만 틀림</option>
+      </select></div>
+      <div class="field"><label for="fDays">마지막 테스트 후</label>
+        <div class="row"><input class="num" id="fDays" type="number" min="0"> 일 이상 지남</div></div>
+    </div>
     <div class="row" style="gap:18px">
       <label class="check"><input type="checkbox" id="fStar"> ★ 표시한 단어만</label>
       <label class="check"><input type="checkbox" id="fWrong"> 오답 모음만</label>
@@ -152,6 +186,7 @@ td.w{font-size:16px;font-weight:700}
     <div class="row" style="justify-content:space-between">
       <span class="hint" id="dataInfo"></span>
       <div class="row">
+        <button class="btn" id="clearHist">테스트 기록 지우기</button>
         <button class="btn" id="clearWrong">오답 모음 비우기</button>
         <button class="btn" id="restoreDefault">기본 단어장으로 되돌리기</button>
       </div>
@@ -168,9 +203,25 @@ td.w{font-size:16px;font-weight:700}
       <button class="btn" id="prev">← 이전</button>
       <button class="btn" id="hideBtn">뜻 가리기</button>
       <button class="btn" id="shuffleBtn">섞기</button>
+      <button class="btn" id="speakBtn">듣기</button>
       <button class="btn" id="next">다음 →</button>
     </div>
-    <div class="keys" style="margin-top:10px"><kbd>←</kbd> <kbd>→</kbd> 이동 · <kbd>Space</kbd> 뜻 가리기 · <kbd>F</kbd> ★ 표시 · <kbd>S</kbd> 섞기 · <kbd>Home</kbd> <kbd>End</kbd> 처음/끝</div>
+    <div class="keys" style="margin-top:10px"><kbd>←</kbd> <kbd>→</kbd> 이동 · <kbd>Space</kbd> 뜻 가리기 · <kbd>F</kbd> ★ 표시 · <kbd>S</kbd> 섞기 · <kbd>P</kbd> 듣기 · <kbd>Home</kbd> <kbd>End</kbd> 처음/끝 · <kbd>+</kbd> <kbd>−</kbd> 글자 크기 · <kbd>/</kbd> 찾기</div>
+  </section>
+
+  <!-- list -->
+  <section id="list" hidden>
+    <div class="panel">
+      <div class="row">
+        <input class="search" id="lQ" type="search" autocomplete="off" placeholder="한자·히라가나·뜻·발음·번호로 찾기">
+        <select id="lSort"><option value="n">번호순</option><option value="weak">정답률 낮은 순</option><option value="exam">기출 많은 순</option></select>
+        <label class="check"><input type="checkbox" id="lAll"> 범위 밖도 포함</label>
+      </div>
+      <div class="tbl tall"><table>
+        <thead><tr><th>번호</th><th>단어</th><th>읽기</th><th>뜻</th><th>상태</th><th>주제</th><th>기출</th><th>기록</th><th></th></tr></thead>
+        <tbody id="lBody"></tbody></table></div>
+      <div class="hint">줄을 누르면 지금 보이는 목록 순서 그대로 학습 카드로 넘어가요.</div>
+    </div>
   </section>
 
   <!-- test -->
@@ -194,10 +245,13 @@ let WORDS = LS.get("words", null) || DEFAULT_WORDS;
 let dataSource = LS.get("source", "기본 단어장");
 let stars = new Set(LS.get("stars", []));
 let wrong = new Set(LS.get("wrong", []));
-const DEFAULT_SCOPE = {from:1, to:170, status:[], topic:"", star:false, wrong:false};
+let hist = LS.get("hist", {});     // {n:[[테스트 시작 시각(ms), "OX"(발음·뜻)], ...]} 단어별 최근 10회
+const DEFAULT_SCOPE = {from:1, to:170, status:[], topics:[], star:false, wrong:false, hist:"", days:0, exam:"", kind:""};
 let scope = Object.assign({}, DEFAULT_SCOPE, LS.get("scope", {}));
+if(scope.topic){ scope.topics = [scope.topic]; } delete scope.topic;   // 예전 단일 주제 설정
 let mode = LS.get("mode", "study");
-let deck = [], idx = 0, quiz = false, shuffled = false;
+let deck = [], deckLabel = null, idx = 0, quiz = false, shuffled = false;   // deckLabel: 목록에서 고른 임시 묶음일 때의 이름
+let scale = LS.get("scale", 1);
 let test = LS.get("test", null);   // {items:[n], i, ans:{n:{p,m}}, done, grade:{n:{p,m}}}
 
 function byNo(n){ return WORDS.find(w => w.n === n); }
@@ -205,13 +259,58 @@ function inScope(w, s = scope){
   if(s.from && w.n < s.from) return false;
   if(s.to && w.n > s.to) return false;
   if(s.status.length && !s.status.includes(w.s)) return false;
-  if(s.topic && w.t !== s.topic) return false;
+  if(s.topics.length && !s.topics.includes(w.t)) return false;
+  if(s.exam){
+    const y = years(w);
+    if(s.exam === "any" && !y.length) return false;
+    if(s.exam === "multi" && y.length < 2) return false;
+    if(s.exam === "recent" && !y.some(v => v >= maxExamYear() - 2)) return false;
+    if(s.exam === "none" && y.length) return false;
+  }
+  if(s.kind && hasKanji(w) !== (s.kind === "kanji")) return false;
   if(s.star && !stars.has(w.n)) return false;
   if(s.wrong && !wrong.has(w.n)) return false;
+  if(s.hist || s.days){
+    const h = hist[w.n] || [], last = h[h.length - 1];
+    if(s.hist === "never") return !h.length;
+    if(!last) return false;
+    if(s.hist === "weak" && !isWeak(h)) return false;
+    if(s.hist === "pron" && last[1] !== "XO") return false;
+    if(s.hist === "mean" && last[1] !== "OX") return false;
+    if(s.days && Date.now() - last[0] < s.days * 864e5) return false;
+  }
   return true;
 }
+const years = w => (String(w.memo || "").match(/\d{4}/g) || []).map(Number);
+const hasKanji = w => /[\u3400-\u9fff々]/.test(w.w);
+function maxExamYear(){
+  if(maxExamYear.src !== WORDS){ maxExamYear.src = WORDS; maxExamYear.v = Math.max(0, ...WORDS.flatMap(years)); }
+  return maxExamYear.v;
+}
+const EXAM_LABEL = {any:"기출만", multi:"기출 2회 이상", recent:"최근 3년 기출", none:"기출 아님"};
+const KIND_LABEL = {kanji:"한자 단어", kana:"가나 단어"};
+function isWeak(h){
+  const ok = h.filter(x => x[1] === "OO").length;
+  return ok / h.length <= 0.5 || (h.length >= 2 && h.slice(-2).every(x => x[1] !== "OO"));
+}
+const HIST_LABEL = {never:"테스트 안 함", weak:"취약", pron:"발음만 틀림", mean:"뜻만 틀림"};
+function recordTest(){
+  const id = Date.parse(test.started);
+  test.items.forEach(n => {
+    const g = test.grade[n], v = g.p + g.m, h = hist[n] || (hist[n] = []);
+    const e = h.find(x => x[0] === id);
+    if(e) e[1] = v; else { h.push([id, v]); if(h.length > 10) h.shift(); }
+  });
+  LS.set("hist", hist);
+}
+function recHTML(n){
+  const h = hist[n]; if(!h || !h.length) return "";
+  const ok = h.filter(x => x[1] === "OO").length, d = Math.floor((Date.now() - h[h.length - 1][0]) / 864e5);
+  const dots = h.slice(-5).map(x => `<span class="dot ${x[1] === "OO" ? "d-ok" : x[1] === "XX" ? "d-no" : "d-half"}" title="발음 ${x[1][0]} · 뜻 ${x[1][1]}"></span>`).join("");
+  return `<div class="rec">최근 테스트 ${h.length}회 중 ${ok}회 정답 · 마지막 ${d ? d + "일 전" : "오늘"} ${dots}</div>`;
+}
 function buildDeck(keepNo){
-  deck = WORDS.filter(w => inScope(w));
+  deck = WORDS.filter(w => inScope(w)); deckLabel = null;
   if(shuffled) shuffle(deck);
   idx = 0;
   if(keepNo != null){ const i = deck.findIndex(w => w.n === keepNo); if(i >= 0) idx = i; }
@@ -221,16 +320,20 @@ function scopeLabel(){
   const p = [];
   p.push(`${scope.from || 1}–${scope.to || "끝"}번`);
   if(scope.status.length) p.push(scope.status.join("·"));
-  if(scope.topic) p.push(scope.topic);
+  if(scope.topics.length) p.push(scope.topics.length > 2 ? `주제 ${scope.topics.length}개` : scope.topics.join(", "));
+  if(scope.exam) p.push(EXAM_LABEL[scope.exam]);
+  if(scope.kind) p.push(KIND_LABEL[scope.kind]);
   if(scope.star) p.push("★만");
   if(scope.wrong) p.push("오답만");
+  if(scope.hist) p.push(HIST_LABEL[scope.hist]);
+  if(scope.days && scope.hist !== "never") p.push(`${scope.days}일 이상 지남`);
   return p.join(" · ");
 }
 
 /* ---------- study ---------- */
 function renderStudy(){
   const card = $("card");
-  $("scopeText").innerHTML = `범위 <b>${esc(scopeLabel())}</b>`;
+  $("scopeText").innerHTML = `범위 <b>${esc(deckLabel || scopeLabel())}</b>`;
   if(!deck.length){
     card.className = "card";
     card.innerHTML = `<div class="empty">이 범위에 해당하는 단어가 없어요.<br>범위 설정에서 조건을 바꿔 보세요.</div>`;
@@ -253,14 +356,45 @@ function renderStudy(){
     </div>
     <div class="meaning reveal">${esc(w.m)}</div>
     <div class="hint-reveal">Space를 눌러 발음·뜻 보기</div>
-    ${w.e ? `<div class="ex reveal"><div class="j jp">${esc(w.e)}</div><div class="k">${esc(w.ek)}</div></div>` : ""}
-    ${w.memo ? `<div class="memo reveal">기출 ${esc(w.memo)}</div>` : ""}`;
+    ${w.e ? `<div class="ex reveal"><div class="j jp" id="exJ" title="눌러서 듣기">${esc(w.e)}</div><div class="k">${esc(w.ek)}</div></div>` : ""}
+    ${w.memo ? `<div class="memo reveal">기출 ${esc(w.memo)}</div>` : ""}
+    ${recHTML(w.n)}`;
   $("starBtn").onclick = e => { e.stopPropagation(); toggleStar(); };
+  if($("exJ")) $("exJ").onclick = () => speak(w.e);
+  fitWord();
   $("posText").textContent = `${idx+1} / ${deck.length}`;
   $("bar").style.width = ((idx+1)/deck.length*100) + "%";
   $("hideBtn").textContent = quiz ? "뜻 보기" : "뜻 가리기";
   $("shuffleBtn").textContent = shuffled ? "번호순" : "섞기";
   LS.set("pos", w.n);
+}
+// 긴 단어는 카드 폭에 맞을 때까지 줄이고, 그래도 넘치면 줄바꿈
+function fitWord(){
+  document.querySelectorAll(".word").forEach(el => {
+    el.style.fontSize = ""; el.style.whiteSpace = "";
+    let size = parseFloat(getComputedStyle(el).fontSize);
+    while(el.scrollWidth > el.clientWidth && size > 28){ size = Math.max(28, size * 0.94); el.style.fontSize = size + "px"; }
+    if(el.scrollWidth > el.clientWidth){ el.style.whiteSpace = "normal"; el.style.wordBreak = "break-all"; }
+  });
+}
+const SCALES = [1, 1.25, 1.5], SCALE_LABEL = ["보통", "크게", "아주 크게"];
+function applyScale(){
+  if(!SCALES.includes(scale)) scale = 1;
+  document.documentElement.style.setProperty("--scale", scale);
+  $("sizeBtn").textContent = "글자 " + SCALE_LABEL[SCALES.indexOf(scale)];
+  LS.set("scale", scale); fitWord();
+}
+function stepScale(d){
+  const i = SCALES.indexOf(scale) + d;
+  scale = d ? SCALES[Math.max(0, Math.min(SCALES.length - 1, i))] : SCALES[(SCALES.indexOf(scale) + 1) % SCALES.length];
+  applyScale();
+}
+function speak(text){
+  if(!text) return;
+  if(!("speechSynthesis" in window)){ toast("이 브라우저는 읽어주기를 지원하지 않아요"); return; }
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text); u.lang = "ja-JP"; u.rate = 0.9;
+  speechSynthesis.speak(u);
 }
 function move(d){ if(!deck.length) return; idx = (idx + d + deck.length) % deck.length; renderStudy(); }
 function toggleStar(){
@@ -275,25 +409,43 @@ let draft = null;
 function openScope(){
   draft = JSON.parse(JSON.stringify(scope));
   $("fFrom").value = draft.from || ""; $("fTo").value = draft.to || "";
-  const topics = [...new Set(WORDS.map(w => w.t).filter(Boolean))].sort();
-  $("fTopic").innerHTML = `<option value="">전체</option>` + topics.map(t => `<option ${t===draft.topic?"selected":""}>${esc(t)}</option>`).join("");
   $("fStar").checked = draft.star; $("fWrong").checked = draft.wrong;
-  renderStatusChips(); updateCount();
+  $("fHist").value = draft.hist; $("fDays").value = draft.days || "";
+  $("fExam").value = draft.exam; $("fKind").value = draft.kind;
+  const y = maxExamYear(); $("fExam").querySelector('[value="recent"]').textContent = y ? `최근 3년 출제 (${y - 2}–${y})` : "최근 3년 출제";
+  renderDraftChips(); updateCount();
 }
-function renderStatusChips(){
-  const statuses = [...new Set([...STATUSES, ...WORDS.map(w => w.s)])].filter(Boolean);
-  $("fStatus").innerHTML = statuses.map(s => `<button class="chip ${draft.status.includes(s)?"on":""}" data-s="${esc(s)}">${esc(s)}</button>`).join("");
-  $("fStatus").querySelectorAll("button").forEach(b => b.onclick = () => {
-    const s = b.dataset.s; draft.status = draft.status.includes(s) ? draft.status.filter(x => x !== s) : [...draft.status, s];
-    renderStatusChips(); updateCount();
+function renderChips(box, values, key){
+  $(box).innerHTML = values.map(v => `<button class="chip ${draft[key].includes(v)?"on":""}" data-v="${esc(v)}">${esc(v)}</button>`).join("");
+  $(box).querySelectorAll("button").forEach(b => b.onclick = () => {
+    const v = b.dataset.v; draft[key] = draft[key].includes(v) ? draft[key].filter(x => x !== v) : [...draft[key], v];
+    renderChips(box, values, key); updateCount();
   });
 }
+function renderDraftChips(){
+  renderChips("fStatus", [...new Set([...STATUSES, ...WORDS.map(w => w.s)])].filter(Boolean), "status");
+  renderChips("fTopics", [...new Set(WORDS.map(w => w.t).filter(Boolean))].sort(), "topics");
+}
+// 지금 범위의 폭만큼 앞뒤로 옮김 (1–170 → 171–340)
+function shiftChunk(d){
+  readDraft();
+  const max = Math.max(...WORDS.map(w => w.n)), size = draft.from && draft.to >= draft.from ? draft.to - draft.from + 1 : 50;
+  let from = (draft.from || 1) + d * size;
+  if(from > max) return toast("마지막 묶음이에요");
+  if(from < 1) from = 1;
+  $("fFrom").value = from; $("fTo").value = from + size - 1; updateCount();
+}
+$("fPrevChunk").onclick = () => shiftChunk(-1);
+$("fNextChunk").onclick = () => shiftChunk(1);
+$("fAll").onclick = () => { $("fFrom").value = 1; $("fTo").value = Math.max(...WORDS.map(w => w.n)); updateCount(); };
 function readDraft(){
   draft.from = parseInt($("fFrom").value) || 0; draft.to = parseInt($("fTo").value) || 0;
-  draft.topic = $("fTopic").value; draft.star = $("fStar").checked; draft.wrong = $("fWrong").checked;
+  draft.star = $("fStar").checked; draft.wrong = $("fWrong").checked;
+  draft.hist = $("fHist").value; draft.days = parseInt($("fDays").value) || 0;
+  draft.exam = $("fExam").value; draft.kind = $("fKind").value;
 }
-function updateCount(){ readDraft(); const n = WORDS.filter(w => inScope(w, draft)).length; $("fCount").textContent = `조건에 맞는 단어 ${n}개 · ★ ${stars.size}개 · 오답 모음 ${wrong.size}개`; }
-["fFrom","fTo","fTopic","fStar","fWrong"].forEach(id => $(id).addEventListener("input", updateCount));
+function updateCount(){ readDraft(); const n = WORDS.filter(w => inScope(w, draft)).length; $("fCount").textContent = `조건에 맞는 단어 ${n}개 · ★ ${stars.size}개 · 오답 모음 ${wrong.size}개 · 테스트 기록 ${Object.keys(hist).length}개`; }
+["fFrom","fTo","fStar","fWrong","fHist","fDays","fExam","fKind"].forEach(id => $(id).addEventListener("input", updateCount));
 $("fApply").onclick = () => {
   readDraft(); scope = draft; LS.set("scope", scope);
   buildDeck(); $("scopePanel").hidden = true; $("scopeBtn").classList.remove("on");
@@ -302,8 +454,8 @@ $("fApply").onclick = () => {
 };
 $("fReset").onclick = () => {
   draft = JSON.parse(JSON.stringify(DEFAULT_SCOPE));
-  $("fFrom").value = draft.from; $("fTo").value = draft.to; $("fTopic").value = ""; $("fStar").checked = false; $("fWrong").checked = false;
-  renderStatusChips(); updateCount();
+  $("fFrom").value = draft.from; $("fTo").value = draft.to; $("fStar").checked = false; $("fWrong").checked = false; $("fHist").value = ""; $("fDays").value = ""; $("fExam").value = ""; $("fKind").value = "";
+  renderDraftChips(); updateCount();
 };
 $("scopeBtn").onclick = () => {
   const p = $("scopePanel"); p.hidden = !p.hidden; $("importPanel").hidden = true;
@@ -314,6 +466,39 @@ $("importBtn").onclick = () => {
   const p = $("importPanel"); p.hidden = !p.hidden; $("scopePanel").hidden = true;
   $("importBtn").classList.toggle("on", !p.hidden); $("scopeBtn").classList.remove("on");
   renderDataInfo();
+};
+
+/* ---------- list ---------- */
+let listed = [];
+const SORT_LABEL = {weak:"정답률 낮은 순", exam:"기출 많은 순"};
+function okRate(n){ const h = hist[n]; return h && h.length ? h.filter(x => x[1] === "OO").length / h.length : 2; }   // 기록 없으면 맨 뒤
+function renderList(){
+  const q = $("lQ").value.trim().toLowerCase(), all = $("lAll").checked, sort = $("lSort").value;
+  listed = (all ? WORDS : WORDS.filter(w => inScope(w))).filter(w => !q || String(w.n) === q || [w.w, w.k, w.m, w.p].some(v => String(v).toLowerCase().includes(q)));
+  if(sort === "weak") listed = [...listed].sort((a, b) => okRate(a.n) - okRate(b.n) || a.n - b.n);
+  if(sort === "exam") listed = [...listed].sort((a, b) => years(b).length - years(a).length || a.n - b.n);
+  $("scopeText").innerHTML = `범위 <b>${esc(all ? "전체 단어장" : scopeLabel())}</b>`;
+  $("posText").textContent = `${listed.length}단어`; $("bar").style.width = "0";
+  $("lBody").innerHTML = listed.length ? listed.map(w => {
+    const h = hist[w.n] || [];
+    const dots = h.slice(-5).map(x => `<span class="dot ${x[1] === "OO" ? "d-ok" : x[1] === "XX" ? "d-no" : "d-half"}" title="발음 ${x[1][0]} · 뜻 ${x[1][1]}"></span>`).join("");
+    return `<tr class="pick" data-n="${w.n}"><td>${w.n}</td><td class="w jp">${esc(w.w)}</td>
+      <td><span class="jp">${esc(w.k)}</span><div class="corr">${esc(w.p)}</div></td><td class="mn">${esc(w.m)}</td>
+      <td><span class="badge ${stCls(w.s)}">${esc(w.s)}</span>${wrong.has(w.n) ? ' <span class="wrongtag">오답</span>' : ""}</td>
+      <td>${esc(w.t)}</td><td class="corr">${esc(w.memo)}</td><td>${dots}</td>
+      <td><button class="star ${stars.has(w.n) ? "on" : ""}" data-star="${w.n}">★</button></td></tr>`;
+  }).join("") : `<tr><td colspan="9" class="empty">해당하는 단어가 없어요.</td></tr>`;
+}
+$("lQ").oninput = $("lSort").onchange = $("lAll").onchange = renderList;
+$("lBody").onclick = e => {
+  const s = e.target.closest("[data-star]");
+  if(s){ const n = +s.dataset.star; stars.has(n) ? stars.delete(n) : stars.add(n); LS.set("stars", [...stars]); s.classList.toggle("on"); return; }
+  const tr = e.target.closest("tr.pick"); if(!tr) return;
+  const q = $("lQ").value.trim(), all = $("lAll").checked, sort = $("lSort").value;
+  deck = listed.slice(); shuffled = false;
+  deckLabel = q || all || sort !== "n" ? [all ? "전체 단어장" : scopeLabel(), q && `검색 “${q}”`, SORT_LABEL[sort]].filter(Boolean).join(" · ") : null;
+  idx = deck.findIndex(w => w.n === +tr.dataset.n);
+  mode = "study"; LS.set("mode", mode); render();
 };
 
 /* ---------- CSV import ---------- */
@@ -364,7 +549,7 @@ function importCSV(rows, name){
     toast(`오답 모음에 ${added}개 추가 (총 ${wrong.size}개)`);
   } else throw new Error("단어장이나 채점표 형식이 아니에요");
 }
-function renderDataInfo(){ $("dataInfo").textContent = `현재: ${dataSource} · ${WORDS.length}단어 · 오답 모음 ${wrong.size}개`; }
+function renderDataInfo(){ $("dataInfo").textContent = `현재: ${dataSource} · ${WORDS.length}단어 · 오답 모음 ${wrong.size}개 · 테스트 기록 ${Object.keys(hist).length}개`; }
 $("drop").onclick = () => $("file").click();
 $("file").onchange = e => { handleFile(e.target.files[0]); e.target.value = ""; };
 ["dragenter","dragover"].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); document.body.classList.add("dragging"); }));
@@ -379,6 +564,11 @@ $("clearWrong").onclick = () => {
   if($("clearWrong").dataset.armed !== "1"){ $("clearWrong").dataset.armed = "1"; $("clearWrong").textContent = "한 번 더 누르면 비워요"; setTimeout(() => { $("clearWrong").dataset.armed = ""; $("clearWrong").textContent = "오답 모음 비우기"; }, 3000); return; }
   wrong.clear(); LS.set("wrong", []); $("clearWrong").dataset.armed = ""; $("clearWrong").textContent = "오답 모음 비우기";
   render(); renderDataInfo(); toast("오답 모음을 비웠어요");
+};
+$("clearHist").onclick = () => {
+  if($("clearHist").dataset.armed !== "1"){ $("clearHist").dataset.armed = "1"; $("clearHist").textContent = "한 번 더 누르면 지워요"; setTimeout(() => { $("clearHist").dataset.armed = ""; $("clearHist").textContent = "테스트 기록 지우기"; }, 3000); return; }
+  hist = {}; LS.set("hist", hist); $("clearHist").dataset.armed = ""; $("clearHist").textContent = "테스트 기록 지우기";
+  buildDeck(); render(); renderDataInfo(); toast("테스트 기록을 지웠어요");
 };
 
 /* ---------- test mode ---------- */
@@ -469,7 +659,7 @@ function renderTest(){
   $("tPrev").onclick = () => tGo(-1);
   $("tNext").onclick = () => tGo(1);
   $("tQuit").onclick = () => finishTest(true);
-  P.focus();
+  fitWord(); P.focus();
 }
 function tGo(d){
   const N = test.items.length;
@@ -483,7 +673,7 @@ function finishTest(early){
     const w = byNo(n) || {}, a = test.ans[n] || {p:"", m:""};
     test.grade[n] = { p: guessReading(a.p, w.p), m: guessMeaning(a.m, w.m) };
   });
-  saveTest(); renderTest();
+  recordTest(); saveTest(); renderTest();
 }
 function renderReview(){
   const box = $("test"), N = test.items.length;
@@ -498,7 +688,7 @@ function renderReview(){
         <div class="stat"><div class="v">${pO}</div><div class="l">발음 정답</div></div>
         <div class="stat"><div class="v">${mO}</div><div class="l">뜻 정답</div></div>
       </div>
-      <div class="hint">O/X는 자동 추정이에요. 장음 표기나 비슷한 뜻은 틀리게 잡힐 수 있으니 버튼을 눌러 고쳐 주세요. 정확한 채점이 필요하면 CSV를 내보내 Claude에게 주세요.</div>
+      <div class="hint">O/X는 자동 추정이에요. 장음 표기나 비슷한 뜻은 틀리게 잡힐 수 있으니 버튼을 눌러 고쳐 주세요. 결과는 단어별 테스트 기록에 저장되고, O/X를 고치면 기록도 같이 바뀌어요. 정확한 채점이 필요하면 CSV를 내보내 Claude에게 주세요.</div>
       <div class="row">
         <button class="btn primary" id="rExport">채점용 CSV 내보내기</button>
         <button class="btn" id="rWrong">오답 모음 업데이트</button>
@@ -516,7 +706,7 @@ function renderReview(){
           <td><div class="mine">${esc(a.p) || "<span class='corr'>(빈칸)</span>"}</div><div class="corr">${esc(w.p)} · <span class="jp">${esc(w.k)}</span></div></td><td>${ox("p")}</td>
           <td><div class="mine">${esc(a.m) || "<span class='corr'>(빈칸)</span>"}</div><div class="corr">${esc(w.m)}</div></td><td>${ox("m")}</td></tr>`;
       }).join("")}</tbody></table></div>`;
-  box.querySelectorAll(".ox button").forEach(b => b.onclick = () => { test.grade[+b.dataset.n][b.dataset.k] = b.dataset.v; saveTest(); renderReview(); });
+  box.querySelectorAll(".ox button").forEach(b => b.onclick = () => { test.grade[+b.dataset.n][b.dataset.k] = b.dataset.v; recordTest(); saveTest(); renderReview(); });
   $("rExport").onclick = exportCSV;
   $("rWrong").onclick = () => {
     let add = 0, rem = 0;
@@ -551,21 +741,37 @@ function exportCSV(){
 function render(){
   $("tabStudy").classList.toggle("on", mode === "study");
   $("tabTest").classList.toggle("on", mode === "test");
-  $("study").hidden = mode !== "study"; $("test").hidden = mode !== "test";
-  mode === "study" ? renderStudy() : renderTest();
+  $("tabList").classList.toggle("on", mode === "list");
+  $("study").hidden = mode !== "study"; $("test").hidden = mode !== "test"; $("list").hidden = mode !== "list";
+  mode === "study" ? renderStudy() : mode === "list" ? renderList() : renderTest();
 }
+$("tabList").onclick = () => { mode = "list"; LS.set("mode", mode); render(); };
+$("sizeBtn").onclick = () => stepScale(0);
+$("speakBtn").onclick = () => { const w = deck[idx]; if(w) speak(w.k || w.w); };
 $("tabStudy").onclick = () => { mode = "study"; LS.set("mode", mode); render(); };
 $("tabTest").onclick = () => { mode = "test"; LS.set("mode", mode); render(); };
 $("prev").onclick = () => move(-1);
 $("next").onclick = () => move(1);
 $("hideBtn").onclick = () => { quiz = !quiz; renderStudy(); };
-$("shuffleBtn").onclick = () => { shuffled = !shuffled; const cur = deck[idx]?.n; buildDeck(shuffled ? null : cur); renderStudy(); };
+$("shuffleBtn").onclick = () => {
+  shuffled = !shuffled; const cur = deck[idx]?.n;
+  if(deckLabel){ shuffled ? shuffle(deck) : deck.sort((a, b) => a.n - b.n); idx = shuffled ? 0 : Math.max(0, deck.findIndex(w => w.n === cur)); }
+  else buildDeck(shuffled ? null : cur);
+  renderStudy();
+};
 $("card").onclick = () => { if(quiz){ quiz = false; renderStudy(); } };
 document.addEventListener("keydown", e => {
-  if(mode !== "study" || e.metaKey || e.ctrlKey || e.altKey) return;
+  if(e.metaKey || e.ctrlKey || e.altKey) return;
   const tag = (e.target.tagName || "").toLowerCase();
   if(tag === "input" || tag === "select" || tag === "textarea") return;
   switch(e.key){
+    case "+": case "=": stepScale(1); return;
+    case "-": case "_": stepScale(-1); return;
+    case "/": e.preventDefault(); mode = "list"; LS.set("mode", mode); render(); $("lQ").focus(); $("lQ").select(); return;
+  }
+  if(mode !== "study") return;
+  switch(e.key){
+    case "p": case "P": case "ㅔ": $("speakBtn").click(); break;
     case "ArrowRight": case "ArrowDown": e.preventDefault(); move(1); break;
     case "ArrowLeft": case "ArrowUp": e.preventDefault(); move(-1); break;
     case " ": e.preventDefault(); quiz = !quiz; renderStudy(); break;
@@ -579,8 +785,12 @@ let sx = null;
 $("card").addEventListener("touchstart", e => sx = e.touches[0].clientX, {passive:true});
 $("card").addEventListener("touchend", e => { if(sx === null) return; const dx = e.changedTouches[0].clientX - sx; if(Math.abs(dx) > 50) move(dx < 0 ? 1 : -1); sx = null; });
 
+if(!["study","list","test"].includes(mode)) mode = "study";
 buildDeck(LS.get("pos", null));
+applyScale();
 render();
+window.addEventListener("resize", fitWord);
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(fitWord);
 </script>
 </body>
 </html>
