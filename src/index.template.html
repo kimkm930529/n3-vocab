@@ -9,7 +9,7 @@
 :root{
   --bg:#f3f4f6; --card:#ffffff; --ink:#1d1d1f; --sub:#6b6b70; --line:#e2e3e7; --soft:#f7f7f9;
   --accent:#c2410c; --accent-ink:#ffffff; --star:#d97706;
-  --good:#15803d; --ing:#b45309; --fail:#b91c1c; --not:#6b7280;
+  --good:#15803d; --mid:#1d4ed8; --ing:#b45309; --fail:#b91c1c; --not:#6b7280;
   --ok-bg:#e8f5ec; --no-bg:#fdecec;
   --scale:1;
 }
@@ -17,7 +17,7 @@
   :root{ color-scheme:dark;
     --bg:#141416; --card:#1e1e21; --ink:#f2f2f3; --sub:#a0a0a8; --line:#2e2e33; --soft:#26262a;
     --accent:#fb923c; --accent-ink:#1a1a1a; --star:#fbbf24;
-    --good:#4ade80; --ing:#fbbf24; --fail:#f87171; --not:#9ca3af;
+    --good:#4ade80; --mid:#60a5fa; --ing:#fbbf24; --fail:#f87171; --not:#9ca3af;
     --ok-bg:#15301f; --no-bg:#3a1a1a;
   }
 }
@@ -66,7 +66,7 @@ select{padding:7px 9px;border:1px solid var(--line);border-radius:8px;background
 .meta{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--sub);gap:8px}
 .no{font-variant-numeric:tabular-nums;font-weight:700;color:var(--ink);font-size:15px}
 .badge{font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px;border:1px solid currentColor;margin-left:8px}
-.s-Good{color:var(--good)} .s-ing{color:var(--ing)} .s-Fail{color:var(--fail)} .s-NotYet{color:var(--not)}
+.s-Pass{color:var(--good)} .s-Good{color:var(--mid)} .s-Fail{color:var(--fail)} .s-NotYet{color:var(--not)}
 .star{border:0;background:none;font-size:20px;cursor:pointer;color:var(--line);padding:0 0 0 6px;line-height:1}
 .star.on{color:var(--star)}
 .wrongtag{font-size:11px;color:var(--fail);border:1px solid var(--fail);border-radius:6px;padding:1px 6px;margin-left:6px}
@@ -92,8 +92,17 @@ kbd{font-family:inherit;border:1px solid var(--line);border-bottom-width:2px;bor
 
 /* test */
 .answers{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:22px}
-.answers input{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--soft);color:var(--ink);font:inherit;font-size:18px}
-.answers input:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
+.answers input,.qgrid input{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--soft);color:var(--ink);font:inherit;font-size:18px}
+.answers input:focus,.qgrid input:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
+.qtext{font-weight:700;font-size:calc(clamp(26px,6vw,42px) * var(--scale));line-height:1.45}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:22px}
+.opt{display:flex;align-items:center;gap:10px;text-align:left;border:1px solid var(--line);background:var(--soft);border-radius:12px;padding:14px 16px;font-size:calc(18px * var(--scale));cursor:pointer}
+.opt.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.answers.one{grid-template-columns:1fr}
+.qgrid{display:grid;grid-template-columns:minmax(96px,1fr) repeat(var(--cols),minmax(0,1.3fr));gap:10px 12px;align-items:center;margin-top:18px}
+.qgrid .qw{font-weight:700;font-size:calc(26px * var(--scale));line-height:1.25}
+.qgrid .qw.ko{font-size:calc(17px * var(--scale))}
+.qgrid .qw small{display:block;font-weight:400;font-size:11px;color:var(--sub)}
 .score{display:flex;gap:10px;flex-wrap:wrap}
 .stat{flex:1;min-width:120px;background:var(--soft);border-radius:12px;padding:12px 14px}
 .stat .v{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
@@ -115,7 +124,7 @@ td .badge{margin-left:0;white-space:nowrap} td .star{font-size:16px;padding:0}
 .ox button{border:1px solid var(--line);background:var(--card);border-radius:7px;padding:3px 8px;cursor:pointer;font-size:12px;font-weight:700;color:var(--sub)}
 .ox button.onO{background:var(--good);border-color:var(--good);color:#fff}
 .ox button.onX{background:var(--fail);border-color:var(--fail);color:#fff}
-@media (max-width:560px){.card{padding:20px 16px}.answers{grid-template-columns:1fr}.keys{display:none}}
+@media (max-width:560px){.card{padding:20px 16px}.answers,.opts{grid-template-columns:1fr}.keys{display:none}}
 </style>
 </head>
 <body>
@@ -125,6 +134,7 @@ td .badge{margin-left:0;white-space:nowrap} td .star{font-size:16px;padding:0}
       <button class="tab" id="tabStudy">학습</button>
       <button class="tab" id="tabList">목록</button>
       <button class="tab" id="tabTest">테스트</button>
+      <button class="tab" id="tabLog">기록</button>
     </div>
     <div class="row">
       <button class="chip" id="sizeBtn" title="+ / −"></button>
@@ -148,6 +158,7 @@ td .badge{margin-left:0;white-space:nowrap} td .star{font-size:16px;padding:0}
         <option value="recent">최근 3년 출제</option>
         <option value="none">기출 아닌 단어만</option>
       </select></div>
+      <div class="field"><label for="fDay">다락원</label><select id="fDay"></select></div>
       <div class="field"><label for="fKind">표기</label><select id="fKind">
         <option value="">전체</option>
         <option value="kanji">한자 있는 단어</option>
@@ -226,6 +237,9 @@ td .badge{margin-left:0;white-space:nowrap} td .star{font-size:16px;padding:0}
 
   <!-- test -->
   <section id="test" hidden></section>
+
+  <!-- log -->
+  <section id="log" hidden></section>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -241,14 +255,21 @@ const stCls = s => "s-" + String(s).replace(/\s/g,"");
 function toast(msg){ const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 2600); }
 
 /* ---------- state ---------- */
+// 내장 단어장이 바뀐 새 빌드에서는 예전에 불러온 CSV보다 내장 단어장을 우선함
+const DATA_VER = "__VER__";
+if(LS.get("dataVer", "") !== DATA_VER){ try{ localStorage.removeItem("n3v2_words"); }catch(e){} LS.set("source", "기본 단어장"); LS.set("dataVer", DATA_VER); }
+const STATUSES = ["Pass","Good","Fail","Not Yet"];
+const normStatus = s => /pass/i.test(s) ? "Pass" : /good/i.test(s) ? "Good" : /fail/i.test(s) ? "Fail" : "Not Yet";   // "1. Pass" → "Pass"
 let WORDS = LS.get("words", null) || DEFAULT_WORDS;
+WORDS.forEach(w => w.s = normStatus(w.s));
 let dataSource = LS.get("source", "기본 단어장");
 let stars = new Set(LS.get("stars", []));
 let wrong = new Set(LS.get("wrong", []));
-let hist = LS.get("hist", {});     // {n:[[테스트 시작 시각(ms), "OX"(발음·뜻)], ...]} 단어별 최근 10회
-const DEFAULT_SCOPE = {from:1, to:170, status:[], topics:[], star:false, wrong:false, hist:"", days:0, exam:"", kind:""};
+let hist = LS.get("hist", {});     // {n:[[테스트 시작 시각(ms), "OX"(발음·뜻, 안 물어본 쪽은 "-")], ...]} 단어별 최근 10회
+const DEFAULT_SCOPE = {from:1, to:170, status:[], topics:[], star:false, wrong:false, hist:"", days:0, exam:"", kind:"", day:""};
 let scope = Object.assign({}, DEFAULT_SCOPE, LS.get("scope", {}));
 if(scope.topic){ scope.topics = [scope.topic]; } delete scope.topic;   // 예전 단일 주제 설정
+scope.status = scope.status.filter(x => STATUSES.includes(x));
 let mode = LS.get("mode", "study");
 let deck = [], deckLabel = null, idx = 0, quiz = false, shuffled = false;   // deckLabel: 목록에서 고른 임시 묶음일 때의 이름
 let scale = LS.get("scale", 1);
@@ -268,6 +289,7 @@ function inScope(w, s = scope){
     if(s.exam === "none" && y.length) return false;
   }
   if(s.kind && hasKanji(w) !== (s.kind === "kanji")) return false;
+  if(s.day && w.d !== s.day) return false;
   if(s.star && !stars.has(w.n)) return false;
   if(s.wrong && !wrong.has(w.n)) return false;
   if(s.hist || s.days){
@@ -275,8 +297,8 @@ function inScope(w, s = scope){
     if(s.hist === "never") return !h.length;
     if(!last) return false;
     if(s.hist === "weak" && !isWeak(h)) return false;
-    if(s.hist === "pron" && last[1] !== "XO") return false;
-    if(s.hist === "mean" && last[1] !== "OX") return false;
+    if(s.hist === "pron" && !(last[1][0] === "X" && last[1][1] !== "X")) return false;
+    if(s.hist === "mean" && !(last[1][1] === "X" && last[1][0] !== "X")) return false;
     if(s.days && Date.now() - last[0] < s.days * 864e5) return false;
   }
   return true;
@@ -289,9 +311,30 @@ function maxExamYear(){
 }
 const EXAM_LABEL = {any:"기출만", multi:"기출 2회 이상", recent:"최근 3년 기출", none:"기출 아님"};
 const KIND_LABEL = {kanji:"한자 단어", kana:"가나 단어"};
+/* 일별 학습 기록 {"2026-10-11": {s:[학습 카드로 본 단어 번호], t:{테스트 시작 시각:[문항 수, 정답 수]}}} */
+let days = LS.get("days", {});
+const dateKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const dayRec = k => days[k] || (days[k] = {s:[], t:{}});
+const native = name => window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers[name];
+function saveDays(){
+  LS.set("days", days);
+  // 맥 앱에서는 Application Support/N3Words/daily_log.csv 로도 자동 저장
+  clearTimeout(saveDays._t); saveDays._t = setTimeout(() => { if(native("n3log")) native("n3log").postMessage({text: daysCSV()}); }, 1500);
+}
+function markSeen(n){ const r = dayRec(dateKey()); if(!r.s.includes(n)){ r.s.push(n); saveDays(); } }
+function dayRows(){
+  return Object.keys(days).sort().map(k => {
+    const r = days[k], t = Object.values(r.t || {}), q = t.reduce((a, x) => a + x[0], 0), ok = t.reduce((a, x) => a + x[1], 0);
+    return {k, seen:(r.s || []).length, tests:t.length, q, ok};
+  }).filter(r => r.seen || r.tests);
+}
+function daysCSV(){
+  return "\ufeff" + ["날짜,본 단어,테스트 횟수,테스트 문항,정답,정답률(%)", ...dayRows().map(r => [r.k, r.seen, r.tests, r.q, r.ok, r.q ? Math.round(r.ok / r.q * 100) : ""].join(","))].join("\n");
+}
+const vOk = v => !v.includes("X"), vNo = v => !v.includes("O");
 function isWeak(h){
-  const ok = h.filter(x => x[1] === "OO").length;
-  return ok / h.length <= 0.5 || (h.length >= 2 && h.slice(-2).every(x => x[1] !== "OO"));
+  const ok = h.filter(x => vOk(x[1])).length;
+  return ok / h.length <= 0.5 || (h.length >= 2 && h.slice(-2).every(x => !vOk(x[1])));
 }
 const HIST_LABEL = {never:"테스트 안 함", weak:"취약", pron:"발음만 틀림", mean:"뜻만 틀림"};
 function recordTest(){
@@ -302,11 +345,12 @@ function recordTest(){
     if(e) e[1] = v; else { h.push([id, v]); if(h.length > 10) h.shift(); }
   });
   LS.set("hist", hist);
+  dayRec(dateKey(new Date(id))).t[id] = [test.items.length, test.items.filter(n => gOk(test.grade[n])).length]; saveDays();
 }
 function recHTML(n){
   const h = hist[n]; if(!h || !h.length) return "";
-  const ok = h.filter(x => x[1] === "OO").length, d = Math.floor((Date.now() - h[h.length - 1][0]) / 864e5);
-  const dots = h.slice(-5).map(x => `<span class="dot ${x[1] === "OO" ? "d-ok" : x[1] === "XX" ? "d-no" : "d-half"}" title="발음 ${x[1][0]} · 뜻 ${x[1][1]}"></span>`).join("");
+  const ok = h.filter(x => vOk(x[1])).length, d = Math.floor((Date.now() - h[h.length - 1][0]) / 864e5);
+  const dots = h.slice(-5).map(x => `<span class="dot ${vOk(x[1]) ? "d-ok" : vNo(x[1]) ? "d-no" : "d-half"}" title="발음 ${x[1][0]} · 뜻 ${x[1][1]}"></span>`).join("");
   return `<div class="rec">최근 테스트 ${h.length}회 중 ${ok}회 정답 · 마지막 ${d ? d + "일 전" : "오늘"} ${dots}</div>`;
 }
 function buildDeck(keepNo){
@@ -323,6 +367,7 @@ function scopeLabel(){
   if(scope.topics.length) p.push(scope.topics.length > 2 ? `주제 ${scope.topics.length}개` : scope.topics.join(", "));
   if(scope.exam) p.push(EXAM_LABEL[scope.exam]);
   if(scope.kind) p.push(KIND_LABEL[scope.kind]);
+  if(scope.day) p.push("다락원 " + scope.day);
   if(scope.star) p.push("★만");
   if(scope.wrong) p.push("오답만");
   if(scope.hist) p.push(HIST_LABEL[scope.hist]);
@@ -345,7 +390,7 @@ function renderStudy(){
   card.innerHTML = `
     <div class="meta">
       <div class="row" style="gap:0"><span class="no">No. ${w.n}</span><span class="badge ${stCls(w.s)}">${esc(w.s)}</span>${wrong.has(w.n) ? '<span class="wrongtag">오답</span>' : ""}<button class="star ${stars.has(w.n) ? "on" : ""}" id="starBtn" title="F">★</button></div>
-      <div>${esc(w.t)}</div>
+      <div>${esc(w.t)}${w.d ? " · " + esc(w.d) : ""}</div>
     </div>
     <div class="head">
       <div class="word jp">${esc(w.w)}</div>
@@ -366,7 +411,7 @@ function renderStudy(){
   $("bar").style.width = ((idx+1)/deck.length*100) + "%";
   $("hideBtn").textContent = quiz ? "뜻 보기" : "뜻 가리기";
   $("shuffleBtn").textContent = shuffled ? "번호순" : "섞기";
-  LS.set("pos", w.n);
+  LS.set("pos", w.n); markSeen(w.n);
 }
 // 긴 단어는 카드 폭에 맞을 때까지 줄이고, 그래도 넘치면 줄바꿈
 function fitWord(){
@@ -404,7 +449,6 @@ function toggleStar(){
 }
 
 /* ---------- scope panel ---------- */
-const STATUSES = ["Fail","ing","Not Yet","Good"];
 let draft = null;
 function openScope(){
   draft = JSON.parse(JSON.stringify(scope));
@@ -412,6 +456,8 @@ function openScope(){
   $("fStar").checked = draft.star; $("fWrong").checked = draft.wrong;
   $("fHist").value = draft.hist; $("fDays").value = draft.days || "";
   $("fExam").value = draft.exam; $("fKind").value = draft.kind;
+  const dnum = x => parseInt(String(x).replace(/\D/g, "")) || 0;
+  $("fDay").innerHTML = `<option value="">전체</option>` + [...new Set(WORDS.map(w => w.d).filter(Boolean))].sort((a, b) => dnum(a) - dnum(b)).map(d => `<option ${d === draft.day ? "selected" : ""}>${esc(d)}</option>`).join("");
   const y = maxExamYear(); $("fExam").querySelector('[value="recent"]').textContent = y ? `최근 3년 출제 (${y - 2}–${y})` : "최근 3년 출제";
   renderDraftChips(); updateCount();
 }
@@ -423,7 +469,7 @@ function renderChips(box, values, key){
   });
 }
 function renderDraftChips(){
-  renderChips("fStatus", [...new Set([...STATUSES, ...WORDS.map(w => w.s)])].filter(Boolean), "status");
+  renderChips("fStatus", STATUSES, "status");
   renderChips("fTopics", [...new Set(WORDS.map(w => w.t).filter(Boolean))].sort(), "topics");
 }
 // 지금 범위의 폭만큼 앞뒤로 옮김 (1–170 → 171–340)
@@ -442,10 +488,10 @@ function readDraft(){
   draft.from = parseInt($("fFrom").value) || 0; draft.to = parseInt($("fTo").value) || 0;
   draft.star = $("fStar").checked; draft.wrong = $("fWrong").checked;
   draft.hist = $("fHist").value; draft.days = parseInt($("fDays").value) || 0;
-  draft.exam = $("fExam").value; draft.kind = $("fKind").value;
+  draft.exam = $("fExam").value; draft.kind = $("fKind").value; draft.day = $("fDay").value;
 }
 function updateCount(){ readDraft(); const n = WORDS.filter(w => inScope(w, draft)).length; $("fCount").textContent = `조건에 맞는 단어 ${n}개 · ★ ${stars.size}개 · 오답 모음 ${wrong.size}개 · 테스트 기록 ${Object.keys(hist).length}개`; }
-["fFrom","fTo","fStar","fWrong","fHist","fDays","fExam","fKind"].forEach(id => $(id).addEventListener("input", updateCount));
+["fFrom","fTo","fStar","fWrong","fHist","fDays","fExam","fKind","fDay"].forEach(id => $(id).addEventListener("input", updateCount));
 $("fApply").onclick = () => {
   readDraft(); scope = draft; LS.set("scope", scope);
   buildDeck(); $("scopePanel").hidden = true; $("scopeBtn").classList.remove("on");
@@ -454,7 +500,7 @@ $("fApply").onclick = () => {
 };
 $("fReset").onclick = () => {
   draft = JSON.parse(JSON.stringify(DEFAULT_SCOPE));
-  $("fFrom").value = draft.from; $("fTo").value = draft.to; $("fStar").checked = false; $("fWrong").checked = false; $("fHist").value = ""; $("fDays").value = ""; $("fExam").value = ""; $("fKind").value = "";
+  $("fFrom").value = draft.from; $("fTo").value = draft.to; $("fStar").checked = false; $("fWrong").checked = false; $("fHist").value = ""; $("fDays").value = ""; $("fExam").value = ""; $("fKind").value = ""; $("fDay").value = "";
   renderDraftChips(); updateCount();
 };
 $("scopeBtn").onclick = () => {
@@ -471,7 +517,7 @@ $("importBtn").onclick = () => {
 /* ---------- list ---------- */
 let listed = [];
 const SORT_LABEL = {weak:"정답률 낮은 순", exam:"기출 많은 순"};
-function okRate(n){ const h = hist[n]; return h && h.length ? h.filter(x => x[1] === "OO").length / h.length : 2; }   // 기록 없으면 맨 뒤
+function okRate(n){ const h = hist[n]; return h && h.length ? h.filter(x => vOk(x[1])).length / h.length : 2; }   // 기록 없으면 맨 뒤
 function renderList(){
   const q = $("lQ").value.trim().toLowerCase(), all = $("lAll").checked, sort = $("lSort").value;
   listed = (all ? WORDS : WORDS.filter(w => inScope(w))).filter(w => !q || String(w.n) === q || [w.w, w.k, w.m, w.p].some(v => String(v).toLowerCase().includes(q)));
@@ -481,7 +527,7 @@ function renderList(){
   $("posText").textContent = `${listed.length}단어`; $("bar").style.width = "0";
   $("lBody").innerHTML = listed.length ? listed.map(w => {
     const h = hist[w.n] || [];
-    const dots = h.slice(-5).map(x => `<span class="dot ${x[1] === "OO" ? "d-ok" : x[1] === "XX" ? "d-no" : "d-half"}" title="발음 ${x[1][0]} · 뜻 ${x[1][1]}"></span>`).join("");
+    const dots = h.slice(-5).map(x => `<span class="dot ${vOk(x[1]) ? "d-ok" : vNo(x[1]) ? "d-no" : "d-half"}" title="발음 ${x[1][0]} · 뜻 ${x[1][1]}"></span>`).join("");
     return `<tr class="pick" data-n="${w.n}"><td>${w.n}</td><td class="w jp">${esc(w.w)}</td>
       <td><span class="jp">${esc(w.k)}</span><div class="corr">${esc(w.p)}</div></td><td class="mn">${esc(w.m)}</td>
       <td><span class="badge ${stCls(w.s)}">${esc(w.s)}</span>${wrong.has(w.n) ? ' <span class="wrongtag">오답</span>' : ""}</td>
@@ -534,8 +580,8 @@ function importCSV(rows, name){
   const body = rows.slice(hi + 1).filter(r => /^\d+$/.test((r[col("번호")] || "").trim()));
   const get = (r, k) => col(k) >= 0 ? (r[col(k)] || "").trim() : "";
   if(col("한자/표기") >= 0 && col("히라가나") >= 0 && col("한국어 뜻") >= 0 && col("최종") < 0){
-    const list = body.map(r => ({ n:+get(r,"번호"), s:get(r,"학습상태") || "Not Yet", t:get(r,"주제"), w:get(r,"한자/표기"), k:get(r,"히라가나"),
-      m:get(r,"한국어 뜻"), e:get(r,"예문"), ek:get(r,"예문 한글뜻"), p:get(r,"한글 발음"), memo:get(r,"학습 메모") })).filter(w => w.w);
+    const list = body.map(r => ({ n:+get(r,"번호"), s:normStatus(get(r,"학습상태")), t:get(r,"주제"), w:get(r,"한자/표기"), k:get(r,"히라가나"),
+      m:get(r,"한국어 뜻"), e:get(r,"예문"), ek:get(r,"예문 한글뜻"), p:get(r,"한글 발음"), memo:get(r,"학습 메모"), d:get(r,"다락원") })).filter(w => w.w);
     if(!list.length) throw new Error("단어 행이 없어요");
     list.sort((a,b) => a.n - b.n);
     WORDS = list; dataSource = `${name} (${new Date().toLocaleDateString("ko-KR")})`;
@@ -602,25 +648,88 @@ function guessMeaning(mine, key){
   const toks = String(key).split(/[,;/]|\s{2,}/).map(stem).filter(Boolean);
   return toks.some(t => t === a || (a.length >= 2 && (t.includes(a) || a.includes(t)))) ? "O" : "X";
 }
+let ttype = LS.get("ttype", "write"), tAsk = LS.get("task", "pm"), tPer = LS.get("tper", 1);
 function saveTest(){ LS.set("test", test); }
-function startTest(order, limit){
-  let items = WORDS.filter(w => inScope(w)).map(w => w.n);
+/* 출제 방향. dim: 기록에 남는 쪽(p 발음 / m 뜻), q·o: 고르기 문제의 질문·보기로 쓰는 필드, can: 출제할 수 있는 단어 */
+const TYPES = {
+  write:  {label:"단어 → 발음·뜻 쓰기", hint:"단어를 보고 한글 발음과 뜻을 적어요. 모르는 칸은 비워 두고 넘어가도 돼요. 끝나면 정답과 비교해 O/X를 확인하고, 채점용 CSV로 내보낼 수 있어요."},
+  recall: {label:"뜻 → 단어 쓰기", dim:"p", hint:"뜻을 보고 단어를 적어요. 한글 발음·히라가나·한자 중 편한 쪽으로 쓰면 돼요."},
+  pickM:  {label:"단어 → 뜻 고르기", dim:"m", q:"w", o:"m", hint:"단어를 보고 알맞은 뜻을 넷 중에서 골라요."},
+  pickW:  {label:"뜻 → 단어 고르기", dim:"m", q:"m", o:"w", hint:"뜻을 보고 알맞은 단어를 넷 중에서 골라요."},
+  pickR:  {label:"한자 → 읽기 고르기", dim:"p", q:"w", o:"k", can:w => hasKanji(w), hint:"한자 단어의 읽기를 넷 중에서 골라요. 가나만 있는 단어는 빠져요."},
+  cloze:  {label:"예문 빈칸 → 단어 고르기", dim:"m", q:"w", o:"w", can:w => !!cloze(w), hint:"예문의 빈칸에 들어갈 단어를 넷 중에서 골라요. 예문에서 단어를 찾을 수 없는 몇 개는 빠져요."},
+};
+const typeOf = t => TYPES[t && t.type] ? t.type : "write";
+const gOk = g => g.p !== "X" && g.m !== "X";
+// 예문에서 단어(활용형이면 어간과 뒤따르는 히라가나까지)를 빈칸으로 바꿈. 못 찾으면 ""
+function cloze(w){
+  const e = w.e || "", B = "（　　）";
+  if(e.includes(w.w)) return e.replace(w.w, B);
+  const m = w.w.match(/^.*[㐀-鿿々]/), stem = m ? m[0] : w.w.slice(0, -1);
+  const i = stem ? e.indexOf(stem) : -1; if(i < 0) return "";
+  let j = i + stem.length; while(j < e.length && /[ぁ-ゖ]/.test(e[j])) j++;
+  return e.slice(0, i) + B + e.slice(j);
+}
+const qText = (w, t) => t === "cloze" ? cloze(w) : w[TYPES[t].q];
+// 오답 보기 3개: 같은 주제·같은 품사 꼴(읽기 문제는 같은 글자 수)에서 먼저 뽑고 모자라면 넓힘
+function makeOptions(w, t){
+  const T = TYPES[t], kind = x => /[うくぐすつぬぶむる]$/.test(x.k) ? "v" : /い$/.test(x.k) ? "a" : "n";
+  const near = t === "pickR" ? x => x.k.length === w.k.length : x => x.t === w.t;
+  const pools = [x => near(x) && kind(x) === kind(w), x => kind(x) === kind(w), () => true];
+  const seen = new Set([w[T.o]]), out = [];
+  for(const f of pools){
+    for(const x of shuffle(WORDS.filter(f))){
+      if(out.length === 3) break;
+      if(seen.has(x[T.o]) || x[T.q] === w[T.q] || (T.can && !T.can(x))) continue;
+      seen.add(x[T.o]); out.push(x.n);
+    }
+    if(out.length === 3) break;
+  }
+  return shuffle([w.n, ...out]);
+}
+const toHira = s => s.replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60));
+function guessWord(mine, w){
+  if(!mine) return "X";
+  const a = toHira(norm(mine));
+  return a === toHira(norm(w.w)) || a === toHira(norm(w.k)) ? "O" : guessReading(mine, w.p);
+}
+const askOf = t => typeOf(t) === "write" ? t.ask || "pm" : "";                 // 쓰기에서 묻는 쪽: pm / p / m
+const perOf = t => TYPES[typeOf(t)].o ? 1 : t.per || 1;                         // 한 화면에 나오는 문항 수
+const ASK_LABEL = {pm:"발음과 뜻", p:"발음만", m:"뜻만"};
+function fieldsOf(t){
+  if(typeOf(t) === "recall") return [{k:"p", label:"단어 (한글 발음 · 히라가나 · 한자)", ph:"예: 메ー쇼 / めいしょ / 名所"}];
+  return [{k:"p", label:"한글 발음", ph:"예: 메ー쇼"}, {k:"m", label:"뜻", ph:"예: 명소"}].filter(f => askOf(t).includes(f.k));
+}
+function newTest(type, items, label, ask, per){
+  test = { type, ask, per, items, i:0, ans:{}, opts:{}, done:false, grade:{}, started:new Date().toISOString(), label };
+  if(TYPES[type].o) items.forEach(n => test.opts[n] = makeOptions(byNo(n), type));
+  saveTest(); renderTest();
+}
+function startTest(type, order, limit){
+  const T = TYPES[type];
+  let items = WORDS.filter(w => inScope(w) && (!T.can || T.can(w))).map(w => w.n);
   if(order === "shuffle") shuffle(items);
   if(limit > 0) items = items.slice(0, limit);
   if(!items.length){ toast("범위에 단어가 없어요"); return; }
-  test = { items, i:0, ans:{}, done:false, grade:{}, started:new Date().toISOString(), label:scopeLabel() };
-  saveTest(); renderTest();
+  const ask = type === "write" ? tAsk : "pm";
+  newTest(type, items, scopeLabel() + " · " + T.label + (ask === "pm" ? "" : ` (${ASK_LABEL[ask]})`), ask, T.o ? 1 : tPer);
 }
 function renderTest(){
   const box = $("test");
   $("scopeText").innerHTML = `범위 <b>${esc(test ? test.label : scopeLabel())}</b>`;
   if(!test){
-    const n = WORDS.filter(w => inScope(w)).length;
+    const type = TYPES[ttype] ? ttype : "write", T = TYPES[type];
+    const n = WORDS.filter(w => inScope(w) && (!T.can || T.can(w))).length;
     $("posText").textContent = ""; $("bar").style.width = "0";
     box.innerHTML = `
       <div class="panel">
         <h3>테스트 시작</h3>
-        <div class="hint">단어를 보고 한글 발음과 뜻을 적어요. 모르는 칸은 비워 두고 넘어가도 돼요. 끝나면 정답과 비교해 O/X를 확인하고, 채점용 CSV로 내보낼 수 있어요.</div>
+        <div class="field"><label for="tType">출제 방향</label><select id="tType">${Object.keys(TYPES).map(k => `<option value="${k}" ${k === type ? "selected" : ""}>${TYPES[k].label}</option>`).join("")}</select></div>
+        <div class="hint">${T.hint}</div>
+        <div class="row" style="gap:18px;align-items:flex-end" ${T.o ? "hidden" : ""}>
+          <div class="field" ${type === "write" ? "" : "hidden"}><label for="tAsk">묻는 것</label><select id="tAsk">${Object.keys(ASK_LABEL).map(k => `<option value="${k}" ${k === tAsk ? "selected" : ""}>${ASK_LABEL[k]}</option>`).join("")}</select></div>
+          <div class="field"><label for="tPer">한 화면에</label><select id="tPer"><option value="1">1개씩</option><option value="5" ${tPer === 5 ? "selected" : ""}>5개씩 (Tab으로 이동)</option></select></div>
+        </div>
         <div class="row" style="gap:18px;align-items:flex-end">
           <div class="field"><span class="lbl">현재 범위</span><b>${esc(scopeLabel())} · ${n}단어</b></div>
           <div class="field"><label for="tOrder">순서</label><select id="tOrder"><option value="shuffle">섞어서</option><option value="seq">번호순</option></select></div>
@@ -628,96 +737,147 @@ function renderTest(){
         </div>
         <div class="row"><button class="btn primary" id="tStart" ${n ? "" : "disabled"}>시작</button><span class="hint">범위는 위의 <b>범위 설정</b>에서 바꿀 수 있어요.</span></div>
       </div>`;
-    $("tStart").onclick = () => startTest($("tOrder").value, +$("tLimit").value);
+    $("tType").onchange = () => { ttype = $("tType").value; LS.set("ttype", ttype); renderTest(); };
+    $("tAsk").onchange = () => { tAsk = $("tAsk").value; LS.set("task", tAsk); };
+    $("tPer").onchange = () => { tPer = +$("tPer").value; LS.set("tper", tPer); };
+    $("tStart").onclick = () => startTest(type, $("tOrder").value, +$("tLimit").value);
     return;
   }
   if(test.done) return renderReview();
-  const N = test.items.length, n = test.items[test.i], w = byNo(n) || {n, w:"?", k:"", m:"", p:""};
-  const a = test.ans[n] || {p:"", m:""};
-  $("posText").textContent = `${test.i+1} / ${N}`;
-  $("bar").style.width = ((test.i+1)/N*100) + "%";
-  box.innerHTML = `
-    <div class="card">
-      <div class="meta"><span class="no">No. ${w.n}</span><span>${esc(w.t || "")}</span></div>
-      <div class="head"><div class="word jp">${esc(w.w)}</div></div>
-      <div class="answers">
-        <div class="field"><label for="aP">한글 발음</label><input id="aP" autocomplete="off" value="${esc(a.p)}" placeholder="예: 메ー쇼"></div>
-        <div class="field"><label for="aM">뜻</label><input id="aM" autocomplete="off" value="${esc(a.m)}" placeholder="예: 명소"></div>
-      </div>
-    </div>
+  const type = typeOf(test), T = TYPES[type];
+  const N = test.items.length, per = perOf(test), start = Math.floor(test.i / per) * per, page = test.items.slice(start, start + per);
+  const n = test.items[test.i], w = byNo(n) || {n, w:"?", k:"", m:"", p:"", e:""}, a = test.ans[n] || {};
+  const lastPage = start + per >= N;
+  $("posText").textContent = per === 1 ? `${test.i+1} / ${N}` : `${start+1}–${start+page.length} / ${N}`;
+  $("bar").style.width = ((start+page.length)/N*100) + "%";
+  const meta = `<div class="meta"><span class="no">${type === "write" && per === 1 ? "No. " + w.n : per === 1 ? test.i + 1 + "번" : `${start+1}–${start+page.length}번`}</span><span>${type === "write" && per === 1 ? esc(w.t || "") : esc(test.label.split(" · ").pop())}</span></div>`;
+  const nav = `
     <div class="nav" style="margin-top:14px">
-      <button class="btn" id="tPrev" ${test.i ? "" : "disabled"}>← 이전</button>
-      <button class="btn" id="tNext">${test.i === N-1 ? "제출" : "다음 →"}</button>
+      <button class="btn" id="tPrev" ${start ? "" : "disabled"}>← 이전</button>
+      <button class="btn" id="tNext">${lastPage ? "제출" : "다음 →"}</button>
       <button class="btn" id="tQuit">그만하고 채점</button>
-    </div>
-    <div class="keys" style="margin-top:10px"><kbd>Enter</kbd> 발음 → 뜻 → 다음 · <kbd>Shift</kbd>+<kbd>Enter</kbd> 이전 · 빈칸으로 넘기면 모름 처리</div>`;
-  const P = $("aP"), M = $("aM");
-  const store = () => { test.ans[n] = {p:P.value.trim(), m:M.value.trim()}; saveTest(); };
-  P.oninput = M.oninput = store;
-  P.onkeydown = e => { if(e.isComposing) return; if(e.key === "Enter"){ e.preventDefault(); e.shiftKey ? tGo(-1) : M.focus(); } };
-  M.onkeydown = e => { if(e.isComposing) return; if(e.key === "Enter"){ e.preventDefault(); e.shiftKey ? P.focus() : tGo(1); } };
+    </div>`;
+  if(T.o){
+    const q = qText(w, type), opts = test.opts[n] || [];
+    box.innerHTML = `
+      <div class="card">${meta}
+        <div class="head"><div class="${T.q === "w" && type !== "cloze" ? "word" : "qtext"} ${T.q === "w" ? "jp" : ""}">${esc(q)}</div></div>
+        <div class="opts">${opts.map((x, i) => `<button class="opt ${a.c === x ? "on" : ""} ${T.o === "m" ? "" : "jp"}" data-c="${x}"><kbd>${i+1}</kbd><span>${esc((byNo(x) || {})[T.o])}</span></button>`).join("")}</div>
+      </div>${nav}
+      <div class="keys" style="margin-top:10px"><kbd>1</kbd>–<kbd>4</kbd> 고르고 다음 · <kbd>Enter</kbd> 건너뛰기 · <kbd>←</kbd> 이전</div>`;
+    box.querySelectorAll(".opt").forEach(b => b.onclick = () => pick(+b.dataset.c));
+  } else {
+    const F = fieldsOf(test), recall = type === "recall";
+    const inp = (x, f, ph) => `<input data-n="${x}" data-k="${f.k}" autocomplete="off" aria-label="${f.label}" value="${esc((test.ans[x] || {})[f.k] || "")}" placeholder="${ph ? f.ph : ""}">`;
+    const body = per === 1 ? `
+        <div class="head"><div class="${recall ? "qtext" : "word jp"}">${esc(recall ? w.m : w.w)}</div></div>
+        <div class="answers ${F.length === 1 ? "one" : ""}">${F.map(f => `<div class="field"><label>${f.label}</label>${inp(n, f, true)}</div>`).join("")}</div>` : `
+        <div class="qgrid" style="--cols:${F.length}"><span></span>${F.map(f => `<span class="lbl">${f.label}</span>`).join("")}
+          ${page.map(x => { const v = byNo(x) || {}; return `<div class="qw ${recall ? "ko" : "jp"}">${esc(recall ? v.m : v.w)}${recall ? "" : `<small>No. ${x}</small>`}</div>${F.map(f => inp(x, f, false)).join("")}`; }).join("")}
+        </div>`;
+    // 마지막 칸에서 Tab을 누르면 이 요소로 포커스가 넘어오고, 그때 다음 화면으로 넘김
+    box.innerHTML = `
+      <div class="card">${meta}${body}${per > 1 && !lastPage ? '<span tabindex="0" id="tabNext"></span>' : ""}
+      </div>${nav}
+      <div class="keys" style="margin-top:10px">${per > 1 ? "<kbd>Tab</kbd> 다음 칸 · 마지막 칸에서 <kbd>Tab</kbd> 다음 화면 · " : ""}<kbd>Enter</kbd> 다음 · <kbd>Shift</kbd>+<kbd>Enter</kbd> 이전 · 빈칸으로 넘기면 모름 처리</div>`;
+    const ins = [...box.querySelectorAll("input[data-n]")];
+    ins.forEach((el, j) => {
+      el.oninput = () => { const x = +el.dataset.n; test.ans[x] = Object.assign({}, test.ans[x], {[el.dataset.k]: el.value.trim()}); saveTest(); };
+      el.onkeydown = e => {
+        if(e.isComposing || e.key !== "Enter") return;
+        e.preventDefault();
+        if(e.shiftKey) j ? ins[j-1].focus() : tGo(-1); else j === ins.length - 1 ? tGo(1) : ins[j+1].focus();
+      };
+    });
+    if($("tabNext")) $("tabNext").onfocus = () => tGo(1);
+    if(ins[0]) ins[0].focus();
+  }
   $("tPrev").onclick = () => tGo(-1);
   $("tNext").onclick = () => tGo(1);
   $("tQuit").onclick = () => finishTest(true);
-  fitWord(); P.focus();
+  fitWord();
+}
+function pick(c){
+  test.ans[test.items[test.i]] = {c}; saveTest();
+  test.i < test.items.length - 1 ? tGo(1) : renderTest();
 }
 function tGo(d){
-  const N = test.items.length;
-  if(d > 0 && test.i === N - 1) return finishTest(false);
-  test.i = Math.max(0, Math.min(N - 1, test.i + d)); saveTest(); renderTest();
+  const N = test.items.length, per = perOf(test), start = Math.floor(test.i / per) * per;
+  if(d > 0 && start + per >= N) return finishTest(false);
+  test.i = Math.max(0, start + d * per); saveTest(); renderTest();
 }
 function finishTest(early){
-  if(early){ const cur = test.ans[test.items[test.i]]; const answered = cur && (cur.p || cur.m); test.items = test.items.slice(0, test.i + (answered ? 1 : 0)); if(!test.items.length){ test = null; saveTest(); renderTest(); return; } }
+  if(early){   // 지금 화면에서 답을 적은 문항까지만 채점
+    const per = perOf(test), start = Math.floor(test.i / per) * per; let end = start;
+    test.items.slice(start, start + per).forEach((n, j) => { const a = test.ans[n]; if(a && (a.p || a.m || a.c)) end = start + j + 1; });
+    test.items = test.items.slice(0, end);
+    if(!test.items.length){ test = null; saveTest(); renderTest(); return; }
+  }
   test.done = true;
+  const type = typeOf(test), T = TYPES[type], ask = askOf(test);
   test.items.forEach(n => {
-    const w = byNo(n) || {}, a = test.ans[n] || {p:"", m:""};
-    test.grade[n] = { p: guessReading(a.p, w.p), m: guessMeaning(a.m, w.m) };
+    const w = byNo(n) || {}, a = test.ans[n] || {};
+    if(type === "write") test.grade[n] = { p: ask.includes("p") ? guessReading(a.p, w.p) : "-", m: ask.includes("m") ? guessMeaning(a.m, w.m) : "-" };
+    else { test.grade[n] = {p:"-", m:"-"}; test.grade[n][T.dim] = type === "recall" ? guessWord(a.p, w) : a.c === n ? "O" : "X"; }
   });
   recordTest(); saveTest(); renderTest();
 }
 function renderReview(){
-  const box = $("test"), N = test.items.length;
+  const box = $("test"), N = test.items.length, type = typeOf(test), T = TYPES[type];
   const g = test.items.map(n => test.grade[n]);
-  const pO = g.filter(x => x.p === "O").length, mO = g.filter(x => x.m === "O").length, both = g.filter(x => x.p === "O" && x.m === "O").length;
+  const pO = g.filter(x => x.p === "O").length, mO = g.filter(x => x.m === "O").length, both = g.filter(gOk).length;
+  const blank = "<span class='corr'>(빈칸)</span>";
+  const ox = (n, k) => { const gr = test.grade[n]; return `<div class="ox"><button data-n="${n}" data-k="${k}" data-v="O" class="${gr[k]==="O"?"onO":""}">O</button><button data-n="${n}" data-k="${k}" data-v="X" class="${gr[k]==="X"?"onX":""}">X</button></div>`; };
   $("posText").textContent = `${N}문항 완료`; $("bar").style.width = "100%";
+  const F = type === "write" ? fieldsOf(test) : [];
+  const stats = F.length === 2 ? `
+        <div class="stat"><div class="v">${both} / ${N}</div><div class="l">발음·뜻 모두 정답</div></div>
+        <div class="stat"><div class="v">${pO}</div><div class="l">발음 정답</div></div>
+        <div class="stat"><div class="v">${mO}</div><div class="l">뜻 정답</div></div>` : `
+        <div class="stat"><div class="v">${both} / ${N}</div><div class="l">정답</div></div>
+        <div class="stat"><div class="v">${Math.round(both / N * 100)}%</div><div class="l">정답률</div></div>`;
+  const hint = T.o ? "결과는 단어별 테스트 기록에 저장돼요."
+    : "O/X는 자동 추정이에요. 장음 표기나 비슷한 뜻은 틀리게 잡힐 수 있으니 버튼을 눌러 고쳐 주세요. 결과는 단어별 테스트 기록에 저장되고, O/X를 고치면 기록도 같이 바뀌어요." + (type === "write" ? " 정확한 채점이 필요하면 CSV를 내보내 Claude에게 주세요." : "");
+  const table = type === "write" ? `
+      <thead><tr><th>번호</th><th>단어</th>${F.map(f => `<th>${f.k === "p" ? "발음" : "뜻"} (내 답 / 정답)</th><th></th>`).join("")}</tr></thead>
+      <tbody>${test.items.map(n => {
+        const w = byNo(n) || {}, a = test.ans[n] || {};
+        return `<tr class="${gOk(test.grade[n]) ? "ok" : "no"}"><td>${n}</td><td class="w jp">${esc(w.w)}</td>${F.map(f => `
+          <td><div class="mine">${esc(a[f.k]) || blank}</div><div class="corr">${f.k === "p" ? `${esc(w.p)} · <span class="jp">${esc(w.k)}</span>` : esc(w.m)}</div></td><td>${ox(n, f.k)}</td>`).join("")}</tr>`;
+      }).join("")}</tbody>` : `
+      <thead><tr><th>번호</th><th>문제</th><th>내 답</th><th>정답</th><th></th></tr></thead>
+      <tbody>${test.items.map(n => {
+        const w = byNo(n) || {}, a = test.ans[n] || {};
+        const mine = T.o ? (a.c ? (byNo(a.c) || {})[T.o] : "") : a.p;
+        return `<tr class="${gOk(test.grade[n]) ? "ok" : "no"}"><td>${n}</td><td class="${T.o && T.q === "w" ? "jp" : ""}">${esc(T.o ? qText(w, type) : w.m)}</td>
+          <td class="mine ${T.o === "m" ? "" : "jp"}">${esc(mine) || blank}</td>
+          <td><div class="jp"><b>${esc(w.w)}</b> · ${esc(w.k)}</div><div class="corr">${esc(w.p)} · ${esc(w.m)}</div></td><td>${ox(n, T.dim)}</td></tr>`;
+      }).join("")}</tbody>`;
   box.innerHTML = `
     <div class="panel">
       <h3>결과</h3>
-      <div class="score">
-        <div class="stat"><div class="v">${both} / ${N}</div><div class="l">발음·뜻 모두 정답</div></div>
-        <div class="stat"><div class="v">${pO}</div><div class="l">발음 정답</div></div>
-        <div class="stat"><div class="v">${mO}</div><div class="l">뜻 정답</div></div>
+      <div class="score">${stats}
       </div>
-      <div class="hint">O/X는 자동 추정이에요. 장음 표기나 비슷한 뜻은 틀리게 잡힐 수 있으니 버튼을 눌러 고쳐 주세요. 결과는 단어별 테스트 기록에 저장되고, O/X를 고치면 기록도 같이 바뀌어요. 정확한 채점이 필요하면 CSV를 내보내 Claude에게 주세요.</div>
+      <div class="hint">${hint}</div>
       <div class="row">
-        <button class="btn primary" id="rExport">채점용 CSV 내보내기</button>
+        ${type === "write" ? '<button class="btn primary" id="rExport">채점용 CSV 내보내기</button>' : ""}
         <button class="btn" id="rWrong">오답 모음 업데이트</button>
         <button class="btn" id="rRetry">틀린 것만 다시</button>
         <button class="btn" id="rNew">새 테스트</button>
       </div>
     </div>
-    <div class="tbl"><table>
-      <thead><tr><th>번호</th><th>단어</th><th>발음 (내 답 / 정답)</th><th></th><th>뜻 (내 답 / 정답)</th><th></th></tr></thead>
-      <tbody>${test.items.map(n => {
-        const w = byNo(n) || {}, a = test.ans[n] || {}, gr = test.grade[n];
-        const cls = gr.p === "O" && gr.m === "O" ? "ok" : "no";
-        const ox = (k) => `<div class="ox"><button data-n="${n}" data-k="${k}" data-v="O" class="${gr[k]==="O"?"onO":""}">O</button><button data-n="${n}" data-k="${k}" data-v="X" class="${gr[k]==="X"?"onX":""}">X</button></div>`;
-        return `<tr class="${cls}"><td>${n}</td><td class="w jp">${esc(w.w)}</td>
-          <td><div class="mine">${esc(a.p) || "<span class='corr'>(빈칸)</span>"}</div><div class="corr">${esc(w.p)} · <span class="jp">${esc(w.k)}</span></div></td><td>${ox("p")}</td>
-          <td><div class="mine">${esc(a.m) || "<span class='corr'>(빈칸)</span>"}</div><div class="corr">${esc(w.m)}</div></td><td>${ox("m")}</td></tr>`;
-      }).join("")}</tbody></table></div>`;
+    <div class="tbl"><table>${table}</table></div>`;
   box.querySelectorAll(".ox button").forEach(b => b.onclick = () => { test.grade[+b.dataset.n][b.dataset.k] = b.dataset.v; recordTest(); saveTest(); renderReview(); });
-  $("rExport").onclick = exportCSV;
+  if($("rExport")) $("rExport").onclick = exportCSV;
   $("rWrong").onclick = () => {
     let add = 0, rem = 0;
-    test.items.forEach(n => { const gr = test.grade[n]; if(gr.p === "O" && gr.m === "O"){ if(wrong.delete(n)) rem++; } else { if(!wrong.has(n)) add++; wrong.add(n); } });
+    test.items.forEach(n => { if(gOk(test.grade[n])){ if(wrong.delete(n)) rem++; } else { if(!wrong.has(n)) add++; wrong.add(n); } });
     LS.set("wrong", [...wrong]); toast(`오답 모음: ${add}개 추가, ${rem}개 제외 (총 ${wrong.size}개)`);
   };
   $("rRetry").onclick = () => {
-    const items = test.items.filter(n => !(test.grade[n].p === "O" && test.grade[n].m === "O"));
+    const items = test.items.filter(n => !gOk(test.grade[n]));
     if(!items.length){ toast("틀린 단어가 없어요"); return; }
-    test = { items:shuffle(items), i:0, ans:{}, done:false, grade:{}, started:new Date().toISOString(), label:"직전 테스트의 틀린 단어" };
-    saveTest(); renderTest();
+    newTest(type, shuffle(items), "직전 테스트의 틀린 단어 · " + test.label.split(" · ").pop(), test.ask, test.per);
   };
   $("rNew").onclick = () => { test = null; saveTest(); renderTest(); };
 }
@@ -727,14 +887,49 @@ function exportCSV(){
   const lines = [head.join(",")];
   test.items.forEach((n, i) => { const w = byNo(n) || {}, a = test.ans[n] || {}, g = test.grade[n] || {};
     lines.push([i+1, n, w.w, a.p, a.m, g.p, g.m].map(csvCell).join(",")); });
-  const blob = new Blob(["﻿" + lines.join("\n")], {type:"text/csv;charset=utf-8"});
+  const text = "﻿" + lines.join("\n");
   const d = new Date(), pad = x => String(x).padStart(2, "0");
+  const name = `test_raw_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.csv`;
+  saveFile(name, text);
+}
+// 맥 앱(WKWebView)에서는 저장 창을 띄우고, 브라우저에서는 다운로드
+function saveFile(name, text){
+  if(native("n3save")){ native("n3save").postMessage({name, text}); return; }
+  const blob = new Blob([text], {type:"text/csv;charset=utf-8"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = `test_raw_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.csv`;
+  a.download = name;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   toast("다운로드 폴더에 저장했어요");
+}
+
+/* ---------- daily log ---------- */
+function renderLog(){
+  const rows = dayRows().reverse(), today = rows.find(r => r.k === dateKey()) || {seen:0, q:0, ok:0};
+  // 오늘(아직 안 했으면 어제)부터 거슬러 올라가며 연속으로 학습한 날 수
+  let streak = 0; const d = new Date(), has = k => rows.some(r => r.k === k);
+  if(!has(dateKey(d))) d.setDate(d.getDate() - 1);
+  while(has(dateKey(d))){ streak++; d.setDate(d.getDate() - 1); }
+  $("scopeText").innerHTML = "일별 학습 기록"; $("posText").textContent = `${rows.length}일`; $("bar").style.width = "0";
+  $("log").innerHTML = `
+    <div class="panel">
+      <h3>학습 기록</h3>
+      <div class="score">
+        <div class="stat"><div class="v">${today.seen}</div><div class="l">오늘 본 단어</div></div>
+        <div class="stat"><div class="v">${today.q ? `${today.ok} / ${today.q}` : "–"}</div><div class="l">오늘 테스트 정답</div></div>
+        <div class="stat"><div class="v">${streak}일</div><div class="l">연속 학습</div></div>
+      </div>
+      <div class="row" style="justify-content:space-between">
+        <span class="hint">학습 카드로 본 단어 수와 테스트 결과가 날짜별로 쌓여요.${native("n3log") ? " 맥 앱에서는 <b>~/Library/Application Support/N3Words/daily_log.csv</b>에도 자동으로 저장돼요." : ""}</span>
+        <button class="btn" id="logExport" ${rows.length ? "" : "disabled"}>CSV로 내보내기</button>
+      </div>
+    </div>
+    <div class="tbl" style="margin-top:12px"><table style="min-width:0">
+      <thead><tr><th>날짜</th><th>본 단어</th><th>테스트</th><th>문항</th><th>정답</th><th>정답률</th></tr></thead>
+      <tbody>${rows.length ? rows.map(r => `<tr><td>${r.k}</td><td>${r.seen}</td><td>${r.tests ? r.tests + "회" : "–"}</td><td>${r.q || "–"}</td><td>${r.q ? r.ok : "–"}</td><td>${r.q ? Math.round(r.ok / r.q * 100) + "%" : "–"}</td></tr>`).join("") : `<tr><td colspan="6" class="empty">아직 기록이 없어요.</td></tr>`}</tbody>
+    </table></div>`;
+  $("logExport").onclick = () => saveFile(`n3_daily_log_${dateKey()}.csv`, daysCSV());
 }
 
 /* ---------- mode / keys ---------- */
@@ -742,9 +937,11 @@ function render(){
   $("tabStudy").classList.toggle("on", mode === "study");
   $("tabTest").classList.toggle("on", mode === "test");
   $("tabList").classList.toggle("on", mode === "list");
-  $("study").hidden = mode !== "study"; $("test").hidden = mode !== "test"; $("list").hidden = mode !== "list";
-  mode === "study" ? renderStudy() : mode === "list" ? renderList() : renderTest();
+  $("tabLog").classList.toggle("on", mode === "log");
+  ["study","list","test","log"].forEach(m => $(m).hidden = mode !== m);
+  ({study:renderStudy, list:renderList, test:renderTest, log:renderLog})[mode]();
 }
+$("tabLog").onclick = () => { mode = "log"; LS.set("mode", mode); render(); };
 $("tabList").onclick = () => { mode = "list"; LS.set("mode", mode); render(); };
 $("sizeBtn").onclick = () => stepScale(0);
 $("speakBtn").onclick = () => { const w = deck[idx]; if(w) speak(w.k || w.w); };
@@ -769,6 +966,14 @@ document.addEventListener("keydown", e => {
     case "-": case "_": stepScale(-1); return;
     case "/": e.preventDefault(); mode = "list"; LS.set("mode", mode); render(); $("lQ").focus(); $("lQ").select(); return;
   }
+  if(mode === "test" && test && !test.done && TYPES[typeOf(test)].o){
+    const o = test.opts[test.items[test.i]] || [];
+    if(/^[1-4]$/.test(e.key) && o[e.key - 1] != null) pick(o[e.key - 1]);
+    else if(e.key === "Enter"){ e.preventDefault(); tGo(1); }
+    else if(e.key === "ArrowLeft") tGo(-1);
+    else if(e.key === "ArrowRight" && test.i < test.items.length - 1) tGo(1);
+    return;
+  }
   if(mode !== "study") return;
   switch(e.key){
     case "p": case "P": case "ㅔ": $("speakBtn").click(); break;
@@ -785,7 +990,7 @@ let sx = null;
 $("card").addEventListener("touchstart", e => sx = e.touches[0].clientX, {passive:true});
 $("card").addEventListener("touchend", e => { if(sx === null) return; const dx = e.changedTouches[0].clientX - sx; if(Math.abs(dx) > 50) move(dx < 0 ? 1 : -1); sx = null; });
 
-if(!["study","list","test"].includes(mode)) mode = "study";
+if(!["study","list","test","log"].includes(mode)) mode = "study";
 buildDeck(LS.get("pos", null));
 applyScale();
 render();
