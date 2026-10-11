@@ -756,6 +756,7 @@ function renderTest(){
       <button class="btn" id="tPrev" ${start ? "" : "disabled"}>← 이전</button>
       <button class="btn" id="tNext">${lastPage ? "제출" : "다음 →"}</button>
       <button class="btn" id="tQuit">그만하고 채점</button>
+      ${T.o ? "" : `<button class="btn" id="tPerBtn">${per === 1 ? "5개씩 보기" : "1개씩 보기"}</button>`}
     </div>`;
   if(T.o){
     const q = qText(w, type), opts = test.opts[n] || [];
@@ -795,6 +796,8 @@ function renderTest(){
   $("tPrev").onclick = () => tGo(-1);
   $("tNext").onclick = () => tGo(1);
   $("tQuit").onclick = () => finishTest(true);
+  // 진행 중에도 한 화면에 나오는 문항 수를 바꿀 수 있음 (적어 둔 답은 그대로)
+  if($("tPerBtn")) $("tPerBtn").onclick = () => { test.per = per === 1 ? 5 : 1; tPer = test.per; LS.set("tper", tPer); saveTest(); renderTest(); };
   fitWord();
 }
 function pick(c){
