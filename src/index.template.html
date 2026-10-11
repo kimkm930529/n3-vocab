@@ -192,7 +192,7 @@ td .badge{margin-left:0;white-space:nowrap} td .star{font-size:16px;padding:0}
     <div class="drop" id="drop">CSV 파일을 여기에 끌어다 놓거나 <u>눌러서 선택</u><input type="file" id="file" accept=".csv,text/csv" hidden></div>
     <div class="hint">
       <b>단어장 CSV</b>: 구글 시트에서 파일 → 다운로드 → CSV. 번호·학습상태·주제·한자/표기·히라가나·한국어 뜻·예문·예문 한글뜻·한글 발음 열을 읽어 단어 목록을 교체해요.<br>
-      <b>채점표 CSV</b>: Claude가 만든 채점표를 넣으면 최종이 X·△인 단어를 오답 모음에 추가해요.
+      <b>채점 CSV</b>: 테스트 결과에서 내보낸 CSV를 AI가 채점해 돌려준 파일(또는 채점표)을 넣으면 O/X를 테스트 기록에 반영하고, 틀린 단어는 오답 모음에 넣고 맞힌 단어는 빼요. △는 틀린 것으로 봐요.
     </div>
     <div class="row" style="justify-content:space-between">
       <span class="hint" id="dataInfo"></span>
@@ -252,6 +252,15 @@ const LS = {
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const stCls = s => "s-" + String(s).replace(/\s/g,"");
+// 되돌릴 수 없는 동작은 같은 버튼을 두 번 눌러야 실행
+function confirmTwice(btn, warn, fn){
+  if(btn.dataset.armed !== "1"){
+    btn.dataset.armed = "1"; btn.dataset.label = btn.textContent; btn.textContent = warn;
+    setTimeout(() => { if(btn.dataset.armed === "1"){ btn.dataset.armed = ""; btn.textContent = btn.dataset.label; } }, 3000);
+    return;
+  }
+  btn.dataset.armed = ""; btn.textContent = btn.dataset.label; fn();
+}
 function toast(msg){ const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 2600); }
 
 /* ---------- state ---------- */
@@ -273,9 +282,12 @@ scope.status = scope.status.filter(x => STATUSES.includes(x));
 let mode = LS.get("mode", "study");
 let deck = [], deckLabel = null, idx = 0, quiz = false, shuffled = false;   // deckLabel: 목록에서 고른 임시 묶음일 때의 이름
 let scale = LS.get("scale", 1);
-let test = LS.get("test", null);   // {items:[n], i, ans:{n:{p,m}}, done, grade:{n:{p,m}}}
+let test = LS.get("test", null);   // {type, ask, per, scope, items:[n], i, ans:{n:{p,m}|{c}}, opts:{n:[n]}, done, grade:{n:{p,m}}, started, label}
 
-function byNo(n){ return WORDS.find(w => w.n === n); }
+function byNo(n){
+  if(byNo.src !== WORDS){ byNo.src = WORDS; byNo.map = new Map(WORDS.map(w => [w.n, w])); }
+  return byNo.map.get(n);
+}
 function inScope(w, s = scope){
   if(s.from && w.n < s.from) return false;
   if(s.to && w.n > s.to) return false;
@@ -337,21 +349,21 @@ function isWeak(h){
   return ok / h.length <= 0.5 || (h.length >= 2 && h.slice(-2).every(x => !vOk(x[1])));
 }
 const HIST_LABEL = {never:"테스트 안 함", weak:"취약", pron:"발음만 틀림", mean:"뜻만 틀림"};
-function recordTest(){
-  const id = Date.parse(test.started);
-  test.items.forEach(n => {
-    const g = test.grade[n], v = g.p + g.m, h = hist[n] || (hist[n] = []);
-    const e = h.find(x => x[0] === id);
-    if(e) e[1] = v; else { h.push([id, v]); if(h.length > 10) h.shift(); }
+// 한 번의 테스트(id = 시작 시각) 결과를 단어별 기록과 일별 기록에 반영. 같은 id로 다시 부르면 덮어씀
+function recordGrades(id, grades){
+  grades.forEach(([n, v]) => {
+    const h = hist[n] || (hist[n] = []), e = h.find(x => x[0] === id);
+    if(e) e[1] = v; else { h.push([id, v]); h.sort((a, b) => a[0] - b[0]); if(h.length > 10) h.shift(); }
   });
   LS.set("hist", hist);
-  dayRec(dateKey(new Date(id))).t[id] = [test.items.length, test.items.filter(n => gOk(test.grade[n])).length]; saveDays();
+  dayRec(dateKey(new Date(id))).t[id] = [grades.length, grades.filter(g => vOk(g[1])).length]; saveDays();
 }
+function recordTest(){ recordGrades(Date.parse(test.started), test.items.map(n => [n, test.grade[n].p + test.grade[n].m])); }
+const dotsHTML = h => (h || []).slice(-5).map(x => `<span class="dot ${vOk(x[1]) ? "d-ok" : vNo(x[1]) ? "d-no" : "d-half"}" title="발음 ${x[1][0]} · 뜻 ${x[1][1]}"></span>`).join("");
 function recHTML(n){
   const h = hist[n]; if(!h || !h.length) return "";
   const ok = h.filter(x => vOk(x[1])).length, d = Math.floor((Date.now() - h[h.length - 1][0]) / 864e5);
-  const dots = h.slice(-5).map(x => `<span class="dot ${vOk(x[1]) ? "d-ok" : vNo(x[1]) ? "d-no" : "d-half"}" title="발음 ${x[1][0]} · 뜻 ${x[1][1]}"></span>`).join("");
-  return `<div class="rec">최근 테스트 ${h.length}회 중 ${ok}회 정답 · 마지막 ${d ? d + "일 전" : "오늘"} ${dots}</div>`;
+  return `<div class="rec">최근 테스트 ${h.length}회 중 ${ok}회 정답 · 마지막 ${d ? d + "일 전" : "오늘"} ${dotsHTML(h)}</div>`;
 }
 function buildDeck(keepNo){
   deck = WORDS.filter(w => inScope(w)); deckLabel = null;
@@ -495,8 +507,10 @@ function updateCount(){ readDraft(); const n = WORDS.filter(w => inScope(w, draf
 $("fApply").onclick = () => {
   readDraft(); scope = draft; LS.set("scope", scope);
   buildDeck(); $("scopePanel").hidden = true; $("scopeBtn").classList.remove("on");
-  if(mode === "test" && test && !test.done){ /* keep running test */ }
-  render(); toast(`${deck.length}단어로 설정했어요`);
+  // 아직 답을 적지 않은 테스트는 새 범위로 다시 고르게 하고, 적은 답이 있으면 그대로 둠
+  const running = test && !test.done;
+  if(running && !hasAnswers(test)){ test = null; saveTest(); }
+  render(); toast(running && test ? `범위를 ${deck.length}단어로 바꿨어요. 진행 중인 테스트는 그대로예요` : `${deck.length}단어로 설정했어요`);
 };
 $("fReset").onclick = () => {
   draft = JSON.parse(JSON.stringify(DEFAULT_SCOPE));
@@ -526,12 +540,10 @@ function renderList(){
   $("scopeText").innerHTML = `범위 <b>${esc(all ? "전체 단어장" : scopeLabel())}</b>`;
   $("posText").textContent = `${listed.length}단어`; $("bar").style.width = "0";
   $("lBody").innerHTML = listed.length ? listed.map(w => {
-    const h = hist[w.n] || [];
-    const dots = h.slice(-5).map(x => `<span class="dot ${vOk(x[1]) ? "d-ok" : vNo(x[1]) ? "d-no" : "d-half"}" title="발음 ${x[1][0]} · 뜻 ${x[1][1]}"></span>`).join("");
     return `<tr class="pick" data-n="${w.n}"><td>${w.n}</td><td class="w jp">${esc(w.w)}</td>
       <td><span class="jp">${esc(w.k)}</span><div class="corr">${esc(w.p)}</div></td><td class="mn">${esc(w.m)}</td>
       <td><span class="badge ${stCls(w.s)}">${esc(w.s)}</span>${wrong.has(w.n) ? ' <span class="wrongtag">오답</span>' : ""}</td>
-      <td>${esc(w.t)}</td><td class="corr">${esc(w.memo)}</td><td>${dots}</td>
+      <td>${esc(w.t)}</td><td class="corr">${esc(w.memo)}</td><td>${dotsHTML(hist[w.n])}</td>
       <td><button class="star ${stars.has(w.n) ? "on" : ""}" data-star="${w.n}">★</button></td></tr>`;
   }).join("") : `<tr><td colspan="9" class="empty">해당하는 단어가 없어요.</td></tr>`;
 }
@@ -544,7 +556,7 @@ $("lBody").onclick = e => {
   deck = listed.slice(); shuffled = false;
   deckLabel = q || all || sort !== "n" ? [all ? "전체 단어장" : scopeLabel(), q && `검색 “${q}”`, SORT_LABEL[sort]].filter(Boolean).join(" · ") : null;
   idx = deck.findIndex(w => w.n === +tr.dataset.n);
-  mode = "study"; LS.set("mode", mode); render();
+  setMode("study");
 };
 
 /* ---------- CSV import ---------- */
@@ -588,12 +600,36 @@ function importCSV(rows, name){
     LS.set("words", WORDS); LS.set("source", dataSource);
     buildDeck(); render(); renderDataInfo();
     toast(`단어 ${list.length}개를 불러왔어요`);
-  } else if(col("최종") >= 0){
-    let added = 0;
-    body.forEach(r => { const v = get(r,"최종"); const n = +get(r,"번호"); if(v === "X" || v === "△"){ if(!wrong.has(n)) added++; wrong.add(n); } });
-    LS.set("wrong", [...wrong]); render(); renderDataInfo();
-    toast(`오답 모음에 ${added}개 추가 (총 ${wrong.size}개)`);
+  } else if(["최종","발음 채점","뜻 채점","자가채점(발음)","자가채점(뜻)","자가채점"].some(k => col(k) >= 0)){
+    importScore(body, get, k => col(k) >= 0);
   } else throw new Error("단어장이나 채점표 형식이 아니에요");
+}
+// 채점 CSV(내보낸 파일을 AI가 채점해 돌려준 것, 또는 채점표)를 반영. △는 X로 봄
+function importScore(body, get, has){
+  const pk = ["발음 채점","자가채점(발음)"].find(has), mk = ["뜻 채점","자가채점(뜻)"].find(has);
+  const ox = v => /^[OoＯ○◯]$/.test(v) ? "O" : v === "" || v === "-" ? "" : "X";
+  const rows = body.map(r => {
+    const g = {p: pk ? ox(get(r, pk)) : has("자가채점") ? ox(get(r, "자가채점")) : "", m: mk ? ox(get(r, mk)) : ""};
+    if(!g.p && !g.m && has("최종")) g.p = g.m = ox(get(r, "최종"));   // 발음·뜻 구분이 없는 채점표
+    return {n:+get(r, "번호"), g};
+  }).filter(r => r.g.p || r.g.m);
+  if(!rows.length) throw new Error("채점 결과가 있는 행이 없어요");
+  // 결과 화면에 떠 있는 테스트의 채점이면 그 테스트를 고치고, 아니면 테스트ID(없으면 지금 시각)로 기록을 남김
+  const tid = has("테스트ID") ? +get(body[0], "테스트ID") || 0 : 0;
+  const cur = test && test.done && (tid ? Date.parse(test.started) === tid : rows.every(r => test.items.includes(r.n))) ? test : null;
+  let grades;
+  if(cur){
+    rows.forEach(({n, g}) => { const gr = cur.grade[n]; if(!gr) return; ["p","m"].forEach(k => { if(g[k] && gr[k] !== "-") gr[k] = g[k]; }); });
+    recordTest(); saveTest();
+    grades = rows.filter(r => cur.grade[r.n]).map(r => [r.n, cur.grade[r.n].p + cur.grade[r.n].m]);
+  } else {
+    grades = rows.map(({n, g}) => [n, (g.p || "-") + (g.m || "-")]);
+    recordGrades(tid || Date.now(), grades);
+  }
+  let add = 0, rem = 0;
+  grades.forEach(([n, v]) => { if(vOk(v)){ if(wrong.delete(n)) rem++; } else { if(!wrong.has(n)) add++; wrong.add(n); } });
+  LS.set("wrong", [...wrong]); render(); renderDataInfo();
+  toast(`채점 ${grades.length}개 반영${cur ? " (지금 결과 화면)" : ""} · 오답 모음 ${add}개 추가, ${rem}개 제외`);
 }
 function renderDataInfo(){ $("dataInfo").textContent = `현재: ${dataSource} · ${WORDS.length}단어 · 오답 모음 ${wrong.size}개 · 테스트 기록 ${Object.keys(hist).length}개`; }
 $("drop").onclick = () => $("file").click();
@@ -606,16 +642,12 @@ $("restoreDefault").onclick = () => {
   try{ localStorage.removeItem("n3v2_words"); }catch(e){} LS.set("source", dataSource);
   buildDeck(); render(); renderDataInfo(); toast("기본 단어장으로 되돌렸어요");
 };
-$("clearWrong").onclick = () => {
-  if($("clearWrong").dataset.armed !== "1"){ $("clearWrong").dataset.armed = "1"; $("clearWrong").textContent = "한 번 더 누르면 비워요"; setTimeout(() => { $("clearWrong").dataset.armed = ""; $("clearWrong").textContent = "오답 모음 비우기"; }, 3000); return; }
-  wrong.clear(); LS.set("wrong", []); $("clearWrong").dataset.armed = ""; $("clearWrong").textContent = "오답 모음 비우기";
-  render(); renderDataInfo(); toast("오답 모음을 비웠어요");
-};
-$("clearHist").onclick = () => {
-  if($("clearHist").dataset.armed !== "1"){ $("clearHist").dataset.armed = "1"; $("clearHist").textContent = "한 번 더 누르면 지워요"; setTimeout(() => { $("clearHist").dataset.armed = ""; $("clearHist").textContent = "테스트 기록 지우기"; }, 3000); return; }
-  hist = {}; LS.set("hist", hist); $("clearHist").dataset.armed = ""; $("clearHist").textContent = "테스트 기록 지우기";
-  buildDeck(); render(); renderDataInfo(); toast("테스트 기록을 지웠어요");
-};
+$("clearWrong").onclick = e => confirmTwice(e.currentTarget, "한 번 더 누르면 비워요", () => {
+  wrong.clear(); LS.set("wrong", []); render(); renderDataInfo(); toast("오답 모음을 비웠어요");
+});
+$("clearHist").onclick = e => confirmTwice(e.currentTarget, "한 번 더 누르면 지워요", () => {
+  hist = {}; LS.set("hist", hist); buildDeck(); render(); renderDataInfo(); toast("테스트 기록을 지웠어요");
+});
 
 /* ---------- test mode ---------- */
 const norm = s => String(s || "").replace(/[\s\-ー~〜.·,]/g, "");
@@ -700,8 +732,11 @@ function fieldsOf(t){
   if(typeOf(t) === "recall") return [{k:"p", label:"단어 (한글 발음 · 히라가나 · 한자)", ph:"예: 메ー쇼 / めいしょ / 名所"}];
   return [{k:"p", label:"한글 발음", ph:"예: 메ー쇼"}, {k:"m", label:"뜻", ph:"예: 명소"}].filter(f => askOf(t).includes(f.k));
 }
-function newTest(type, items, label, ask, per){
-  test = { type, ask, per, items, i:0, ans:{}, opts:{}, done:false, grade:{}, started:new Date().toISOString(), label };
+const typeLabel = (type, ask) => TYPES[type].label + (type === "write" && ask && ask !== "pm" ? ` (${ASK_LABEL[ask]})` : "");
+const hasAnswers = t => Object.values(t.ans || {}).some(a => a.p || a.m || a.c);
+// scopeKey: 테스트를 만들 때의 범위 설정. 나중에 범위를 바꾸면 화면에서 알려 주려고 남김
+function newTest(type, items, label, ask, per, scopeKey){
+  test = { type, ask, per, scope:scopeKey, items, i:0, ans:{}, opts:{}, done:false, grade:{}, started:new Date().toISOString(), label };
   if(TYPES[type].o) items.forEach(n => test.opts[n] = makeOptions(byNo(n), type));
   saveTest(); renderTest();
 }
@@ -712,7 +747,7 @@ function startTest(type, order, limit){
   if(limit > 0) items = items.slice(0, limit);
   if(!items.length){ toast("범위에 단어가 없어요"); return; }
   const ask = type === "write" ? tAsk : "pm";
-  newTest(type, items, scopeLabel() + " · " + T.label + (ask === "pm" ? "" : ` (${ASK_LABEL[ask]})`), ask, T.o ? 1 : tPer);
+  newTest(type, items, scopeLabel() + " · " + typeLabel(type, ask), ask, T.o ? 1 : tPer, JSON.stringify(scope));
 }
 function renderTest(){
   const box = $("test");
@@ -750,7 +785,7 @@ function renderTest(){
   const lastPage = start + per >= N;
   $("posText").textContent = per === 1 ? `${test.i+1} / ${N}` : `${start+1}–${start+page.length} / ${N}`;
   $("bar").style.width = ((start+page.length)/N*100) + "%";
-  const meta = `<div class="meta"><span class="no">${type === "write" && per === 1 ? "No. " + w.n : per === 1 ? test.i + 1 + "번" : `${start+1}–${start+page.length}번`}</span><span>${type === "write" && per === 1 ? esc(w.t || "") : esc(test.label.split(" · ").pop())}</span></div>`;
+  const meta = `<div class="meta"><span class="no">${type === "write" && per === 1 ? "No. " + w.n : per === 1 ? test.i + 1 + "번" : `${start+1}–${start+page.length}번`}</span><span>${type === "write" && per === 1 ? esc(w.t || "") : esc(typeLabel(type, test.ask))}</span></div>`;
   const nav = `
     <div class="nav" style="margin-top:14px">
       <button class="btn" id="tPrev" ${start ? "" : "disabled"}>← 이전</button>
@@ -758,9 +793,15 @@ function renderTest(){
       <button class="btn" id="tQuit">그만하고 채점</button>
       ${T.o ? "" : `<button class="btn" id="tPerBtn">${per === 1 ? "5개씩 보기" : "1개씩 보기"}</button>`}
     </div>`;
+  // 범위 설정을 바꿔도 진행 중인 테스트는 그대로라서, 새 범위로 넘어갈 길을 보여 줌
+  const stale = test.scope !== JSON.stringify(scope) ? `
+    <div class="panel" style="margin-bottom:12px"><div class="row" style="justify-content:space-between">
+      <span class="hint">지금 테스트는 범위 설정을 바꾸기 전에 만든 거라 바뀐 범위가 적용되지 않아요. 현재 범위 설정: <b>${esc(scopeLabel())}</b></span>
+      <button class="btn" id="tFresh">이 테스트 버리고 새 범위로 시작</button>
+    </div></div>` : "";
   if(T.o){
     const q = qText(w, type), opts = test.opts[n] || [];
-    box.innerHTML = `
+    box.innerHTML = `${stale}
       <div class="card">${meta}
         <div class="head"><div class="${T.q === "w" && type !== "cloze" ? "word" : "qtext"} ${T.q === "w" ? "jp" : ""}">${esc(q)}</div></div>
         <div class="opts">${opts.map((x, i) => `<button class="opt ${a.c === x ? "on" : ""} ${T.o === "m" ? "" : "jp"}" data-c="${x}"><kbd>${i+1}</kbd><span>${esc((byNo(x) || {})[T.o])}</span></button>`).join("")}</div>
@@ -777,7 +818,7 @@ function renderTest(){
           ${page.map(x => { const v = byNo(x) || {}; return `<div class="qw ${recall ? "ko" : "jp"}">${esc(recall ? v.m : v.w)}${recall ? "" : `<small>No. ${x}</small>`}</div>${F.map(f => inp(x, f, false)).join("")}`; }).join("")}
         </div>`;
     // 마지막 칸에서 Tab을 누르면 이 요소로 포커스가 넘어오고, 그때 다음 화면으로 넘김
-    box.innerHTML = `
+    box.innerHTML = `${stale}
       <div class="card">${meta}${body}${per > 1 && !lastPage ? '<span tabindex="0" id="tabNext"></span>' : ""}
       </div>${nav}
       <div class="keys" style="margin-top:10px">${per > 1 ? "<kbd>Tab</kbd> 다음 칸 · 마지막 칸에서 <kbd>Tab</kbd> 다음 화면 · " : ""}<kbd>Enter</kbd> 다음 · <kbd>Shift</kbd>+<kbd>Enter</kbd> 이전 · 빈칸으로 넘기면 모름 처리</div>`;
@@ -796,6 +837,10 @@ function renderTest(){
   $("tPrev").onclick = () => tGo(-1);
   $("tNext").onclick = () => tGo(1);
   $("tQuit").onclick = () => finishTest(true);
+  if($("tFresh")) $("tFresh").onclick = e => {
+    const fresh = () => { test = null; saveTest(); renderTest(); };
+    hasAnswers(test) ? confirmTwice(e.currentTarget, "적은 답이 사라져요. 한 번 더 누르면 시작", fresh) : fresh();
+  };
   // 진행 중에도 한 화면에 나오는 문항 수를 바꿀 수 있음 (적어 둔 답은 그대로)
   if($("tPerBtn")) $("tPerBtn").onclick = () => { test.per = per === 1 ? 5 : 1; tPer = test.per; LS.set("tper", tPer); saveTest(); renderTest(); };
   fitWord();
@@ -840,7 +885,7 @@ function renderReview(){
         <div class="stat"><div class="v">${both} / ${N}</div><div class="l">정답</div></div>
         <div class="stat"><div class="v">${Math.round(both / N * 100)}%</div><div class="l">정답률</div></div>`;
   const hint = T.o ? "결과는 단어별 테스트 기록에 저장돼요."
-    : "O/X는 자동 추정이에요. 장음 표기나 비슷한 뜻은 틀리게 잡힐 수 있으니 버튼을 눌러 고쳐 주세요. 결과는 단어별 테스트 기록에 저장되고, O/X를 고치면 기록도 같이 바뀌어요." + (type === "write" ? " 정확한 채점이 필요하면 CSV를 내보내 Claude에게 주세요." : "");
+    : "O/X는 자동 추정이에요. 장음 표기나 비슷한 뜻은 틀리게 잡힐 수 있으니 버튼을 눌러 고쳐 주세요. 결과는 단어별 테스트 기록에 저장되고, O/X를 고치면 기록도 같이 바뀌어요." + " 정확한 채점이 필요하면 CSV를 내보내 AI에게 맡기고, 채점 열을 고친 CSV를 이 창에 끌어다 놓으면 결과에 반영돼요.";
   const table = type === "write" ? `
       <thead><tr><th>번호</th><th>단어</th>${F.map(f => `<th>${f.k === "p" ? "발음" : "뜻"} (내 답 / 정답)</th><th></th>`).join("")}</tr></thead>
       <tbody>${test.items.map(n => {
@@ -863,7 +908,7 @@ function renderReview(){
       </div>
       <div class="hint">${hint}</div>
       <div class="row">
-        ${type === "write" ? '<button class="btn primary" id="rExport">채점용 CSV 내보내기</button>' : ""}
+        ${T.o ? "" : '<button class="btn primary" id="rExport">채점용 CSV 내보내기</button>'}
         <button class="btn" id="rWrong">오답 모음 업데이트</button>
         <button class="btn" id="rRetry">틀린 것만 다시</button>
         <button class="btn" id="rNew">새 테스트</button>
@@ -880,20 +925,21 @@ function renderReview(){
   $("rRetry").onclick = () => {
     const items = test.items.filter(n => !gOk(test.grade[n]));
     if(!items.length){ toast("틀린 단어가 없어요"); return; }
-    newTest(type, shuffle(items), "직전 테스트의 틀린 단어 · " + test.label.split(" · ").pop(), test.ask, test.per);
+    newTest(type, shuffle(items), "직전 테스트의 틀린 단어 · " + typeLabel(type, test.ask), test.ask, test.per, test.scope);
   };
   $("rNew").onclick = () => { test = null; saveTest(); renderTest(); };
 }
 function csvCell(v){ v = String(v ?? ""); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+// 적은 답 그대로 내보냄. 정답과 테스트ID를 같이 넣어, AI가 채점 열만 고쳐 돌려주면 다시 불러올 수 있음
 function exportCSV(){
-  const head = ["구분(불필요)","번호","한자/표기","한글 발음","뜻","자가채점(발음)","자가채점(뜻)"];
+  const recall = typeOf(test) === "recall", id = Date.parse(test.started);
+  const head = recall ? ["구분(불필요)","번호","문제(뜻)","내 답","자가채점","정답 표기","정답 히라가나","정답 발음","테스트ID"]
+    : ["구분(불필요)","번호","한자/표기","한글 발음","뜻","자가채점(발음)","자가채점(뜻)","정답 히라가나","정답 발음","정답 뜻","테스트ID"];
   const lines = [head.join(",")];
   test.items.forEach((n, i) => { const w = byNo(n) || {}, a = test.ans[n] || {}, g = test.grade[n] || {};
-    lines.push([i+1, n, w.w, a.p, a.m, g.p, g.m].map(csvCell).join(",")); });
-  const text = "﻿" + lines.join("\n");
+    lines.push((recall ? [i+1, n, w.m, a.p, g.p, w.w, w.k, w.p, id] : [i+1, n, w.w, a.p, a.m, g.p, g.m, w.k, w.p, w.m, id]).map(csvCell).join(",")); });
   const d = new Date(), pad = x => String(x).padStart(2, "0");
-  const name = `test_raw_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.csv`;
-  saveFile(name, text);
+  saveFile(`test_raw_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.csv`, "\ufeff" + lines.join("\n"));
 }
 // 맥 앱(WKWebView)에서는 저장 창을 띄우고, 브라우저에서는 다운로드
 function saveFile(name, text){
@@ -936,20 +982,15 @@ function renderLog(){
 }
 
 /* ---------- mode / keys ---------- */
+const MODES = {study:["tabStudy", () => renderStudy()], list:["tabList", () => renderList()], test:["tabTest", () => renderTest()], log:["tabLog", () => renderLog()]};
 function render(){
-  $("tabStudy").classList.toggle("on", mode === "study");
-  $("tabTest").classList.toggle("on", mode === "test");
-  $("tabList").classList.toggle("on", mode === "list");
-  $("tabLog").classList.toggle("on", mode === "log");
-  ["study","list","test","log"].forEach(m => $(m).hidden = mode !== m);
-  ({study:renderStudy, list:renderList, test:renderTest, log:renderLog})[mode]();
+  Object.keys(MODES).forEach(m => { $(MODES[m][0]).classList.toggle("on", mode === m); $(m).hidden = mode !== m; });
+  MODES[mode][1]();
 }
-$("tabLog").onclick = () => { mode = "log"; LS.set("mode", mode); render(); };
-$("tabList").onclick = () => { mode = "list"; LS.set("mode", mode); render(); };
+function setMode(m){ mode = m; LS.set("mode", m); render(); }
+Object.keys(MODES).forEach(m => $(MODES[m][0]).onclick = () => setMode(m));
 $("sizeBtn").onclick = () => stepScale(0);
 $("speakBtn").onclick = () => { const w = deck[idx]; if(w) speak(w.k || w.w); };
-$("tabStudy").onclick = () => { mode = "study"; LS.set("mode", mode); render(); };
-$("tabTest").onclick = () => { mode = "test"; LS.set("mode", mode); render(); };
 $("prev").onclick = () => move(-1);
 $("next").onclick = () => move(1);
 $("hideBtn").onclick = () => { quiz = !quiz; renderStudy(); };
@@ -967,7 +1008,7 @@ document.addEventListener("keydown", e => {
   switch(e.key){
     case "+": case "=": stepScale(1); return;
     case "-": case "_": stepScale(-1); return;
-    case "/": e.preventDefault(); mode = "list"; LS.set("mode", mode); render(); $("lQ").focus(); $("lQ").select(); return;
+    case "/": e.preventDefault(); setMode("list"); $("lQ").focus(); $("lQ").select(); return;
   }
   if(mode === "test" && test && !test.done && TYPES[typeOf(test)].o){
     const o = test.opts[test.items[test.i]] || [];
@@ -993,7 +1034,7 @@ let sx = null;
 $("card").addEventListener("touchstart", e => sx = e.touches[0].clientX, {passive:true});
 $("card").addEventListener("touchend", e => { if(sx === null) return; const dx = e.changedTouches[0].clientX - sx; if(Math.abs(dx) > 50) move(dx < 0 ? 1 : -1); sx = null; });
 
-if(!["study","list","test","log"].includes(mode)) mode = "study";
+if(!MODES[mode]) mode = "study";
 buildDeck(LS.get("pos", null));
 applyScale();
 render();
