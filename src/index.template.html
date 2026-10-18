@@ -2,8 +2,17 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>N3 단어</title>
+<!-- 폰에서 홈 화면에 추가해 앱처럼 쓰기 (웹으로 올린 dist/web에서만 의미 있음) -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="N3 단어">
+<meta name="theme-color" content="#f3f4f6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141416" media="(prefers-color-scheme: dark)">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -25,7 +34,8 @@
 [hidden]{display:none!important}
 html,body{margin:0;min-height:100%}
 body{background:var(--bg);color:var(--ink);font-family:"Noto Sans KR","Apple SD Gothic Neo",system-ui,sans-serif;
-  display:flex;flex-direction:column;align-items:center;padding:16px 16px 20px;min-height:100vh}
+  display:flex;flex-direction:column;align-items:center;min-height:100vh;
+  padding:max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))}
 .jp{font-family:"Noto Sans JP","Hiragino Sans","Hiragino Kaku Gothic ProN",sans-serif}
 .wrap{width:100%;max-width:calc(780px * var(--scale));display:flex;flex-direction:column;gap:12px}
 button{font:inherit;color:inherit}
@@ -127,7 +137,13 @@ td .badge{margin-left:0;white-space:nowrap} td .star{font-size:16px;padding:0}
 .ox button{border:1px solid var(--line);background:var(--card);border-radius:7px;padding:3px 8px;cursor:pointer;font-size:12px;font-weight:700;color:var(--sub)}
 .ox button.onO{background:var(--good);border-color:var(--good);color:#fff}
 .ox button.onX{background:var(--fail);border-color:var(--fail);color:#fff}
-@media (max-width:560px){.card{padding:20px 16px}.answers,.opts{grid-template-columns:1fr}.keys{display:none}}
+@media (max-width:560px){.card{padding:20px 16px}.answers,.opts{grid-template-columns:1fr}.keys{display:none}
+  /* 폰: 탭을 좁게, 학습 버튼은 화면 아래에 붙여 엄지로 누르기 쉽게, 5개씩 쓰기는 한 줄에 하나씩 */
+  .tab{padding:7px 12px}
+  #study .nav{position:sticky;bottom:0;z-index:1;background:var(--bg);padding:10px 0 max(6px, env(safe-area-inset-bottom))}
+  #study .nav{gap:6px} #study .nav .btn{flex:1;min-width:0;padding:12px 2px;font-size:13px;white-space:nowrap}
+  .qgrid{grid-template-columns:1fr}.qgrid .qw{margin-top:8px}
+  .search{min-width:0}}
 </style>
 </head>
 <body>
@@ -142,7 +158,7 @@ td .badge{margin-left:0;white-space:nowrap} td .star{font-size:16px;padding:0}
     <div class="row">
       <button class="chip" id="sizeBtn" title="+ / −"></button>
       <button class="chip" id="scopeBtn">범위 설정</button>
-      <button class="chip" id="importBtn">불러오기</button>
+      <button class="chip" id="importBtn">데이터</button>
     </div>
   </div>
 
@@ -191,11 +207,21 @@ td .badge{margin-left:0;white-space:nowrap} td .star{font-size:16px;padding:0}
   </div>
 
   <div class="panel" id="importPanel" hidden>
-    <h3>파일 불러오기</h3>
-    <div class="drop" id="drop">CSV 파일을 여기에 끌어다 놓거나 <u>눌러서 선택</u><input type="file" id="file" accept=".csv,text/csv" hidden></div>
+    <h3>동기화 (구글 시트)</h3>
+    <div class="hint">단어장 시트에 <b>Apps Script</b>(<code>dist/sync.gs</code>)를 붙여 웹 앱으로 배포하면, 맥과 폰이 같은 ★·오답·테스트 기록·일별 기록을 쓰고 단어장도 시트에서 바로 받아 와요. 앱에서 바꾼 학습상태는 시트에 적혀요. 방법은 README의 "동기화"를 봐 주세요.</div>
+    <div class="row">
+      <input class="search" id="syUrl" type="url" autocomplete="off" style="flex:1 1 260px" placeholder="https://script.google.com/macros/s/…/exec">
+      <input class="search" id="syToken" type="password" autocomplete="off" placeholder="비밀 값" style="flex:0 1 160px;min-width:120px">
+      <button class="btn" id="sySave">저장</button>
+      <button class="btn primary" id="syNow">지금 동기화</button>
+    </div>
+    <span class="hint" id="syInfo"></span>
+    <h3>파일 불러오기 · 백업</h3>
+    <div class="drop" id="drop">CSV나 백업(JSON) 파일을 여기에 끌어다 놓거나 <u>눌러서 선택</u><input type="file" id="file" accept=".csv,text/csv,.json,application/json" hidden></div>
     <div class="hint">
       <b>단어장 CSV</b>: 구글 시트에서 파일 → 다운로드 → CSV. 번호·학습상태·주제·한자/표기·히라가나·한국어 뜻·예문·예문 한글뜻·한글 발음 열을 읽어 단어 목록을 교체해요.<br>
-      <b>채점 CSV</b>: 테스트 결과에서 내보낸 CSV를 AI가 채점해 돌려준 파일(또는 채점표)을 넣으면 O/X를 테스트 기록에 반영하고, 틀린 단어는 오답 모음에 넣고 맞힌 단어는 빼요. △는 틀린 것으로 봐요.
+      <b>채점 CSV</b>: 테스트 결과에서 내보낸 CSV를 AI가 채점해 돌려준 파일(또는 채점표)을 넣으면 O/X를 테스트 기록에 반영하고, 틀린 단어는 오답 모음에 넣고 맞힌 단어는 빼요. △는 틀린 것으로 봐요.<br>
+      <b>백업 JSON</b>: ★·오답 모음·테스트 기록·일별 기록·바꾼 학습상태를 담아요. 다시 넣으면 지금 기록과 합쳐요(덮어쓰지 않아요).<span id="bkAuto" hidden> 맥 앱은 <b>~/Library/Application Support/N3Words/backups/</b>에 날짜별로 자동 백업해요(최근 14일).</span>
     </div>
     <div class="row" id="gradeDir" style="justify-content:space-between" hidden>
       <span class="hint"><b>AI 채점 폴더</b>: 쓰기 테스트를 마치면 채점용 CSV가 <b>~/Library/Application Support/N3Words/grading/outbox</b>에 자동으로 생겨요. 채점된 CSV를 <b>inbox</b>에 넣어 두면 앱을 켜거나 창으로 돌아올 때 반영하고 <b>done</b>으로 옮겨요.</span>
@@ -211,6 +237,7 @@ td .badge{margin-left:0;white-space:nowrap} td .star{font-size:16px;padding:0}
     <div class="row" style="justify-content:space-between">
       <span class="hint" id="dataInfo"></span>
       <div class="row">
+        <button class="btn" id="bkExport">백업 내보내기</button>
         <button class="btn" id="clearHist">테스트 기록 지우기</button>
         <button class="btn" id="clearWrong">오답 모음 비우기</button>
         <button class="btn" id="restoreDefault">기본 단어장으로 되돌리기</button>
@@ -280,30 +307,41 @@ function toast(msg){ const t = $("toast"); t.textContent = msg; t.classList.add(
 /* ---------- state ---------- */
 // 내장 단어장이 바뀐 새 빌드에서는 예전에 불러온 CSV보다 내장 단어장을 우선함
 const DATA_VER = "__VER__";
-if(LS.get("dataVer", "") !== DATA_VER){ try{ localStorage.removeItem("n3v2_words"); }catch(e){} LS.set("source", "기본 단어장"); LS.set("dataVer", DATA_VER); }
-const STATUSES = ["Pass","Good","Fail","Not Yet"];
-const normStatus = s => /pass/i.test(s) ? "Pass" : /good/i.test(s) ? "Good" : /fail/i.test(s) ? "Fail" : "Not Yet";   // "1. Pass" → "Pass"
-const stSheet = s => `${STATUSES.indexOf(s) + 1}. ${s}`;   // "Pass" → "1. Pass" (시트 표기)
+if(LS.get("dataVer", "") !== DATA_VER){ try{ localStorage.removeItem("n3v2_words"); }catch(e){} LS.set("source", "기본 단어장"); LS.set("dataVer", DATA_VER); LS.set("wordsVer", ""); }
+/*__STATE_JS__*/
 let WORDS = LS.get("words", null) || DEFAULT_WORDS;
 WORDS.forEach(w => w.s = normStatus(w.s));
-// 앱에서 바꾼 학습상태. 단어장과 따로 두어 CSV를 다시 불러와도 남고, 시트가 같은 값으로 따라오면 지움
+// 앱에서 바꾼 학습상태. 단어장과 따로 두어 CSV를 다시 불러와도 남음. s가 null이면 시트 값을 따름 (동기화 때 되돌린 것도 전하려고 남김)
 let statusOv = LS.get("statusOv", {});   // {n: {s, at(바꾼 시각 ms)}}
-// WORDS에 학습상태 변경을 입힘. w.s0은 단어장(시트)의 값. 시트가 따라와서 지운 개수를 돌려줌
+const ovCount = () => WORDS.filter(w => w.s !== w.s0).length;
+// WORDS에 학습상태 변경을 입힘. w.s0은 단어장(시트)의 값. 시트가 같은 값으로 따라온 것은 "시트 따르기"로 바꾸고 그 개수를 돌려줌
 function applyStatus(){
   let caught = 0;
   WORDS.forEach(w => {
     if(w.s0 == null) w.s0 = w.s;
-    if(statusOv[w.n] && statusOv[w.n].s === w.s0){ delete statusOv[w.n]; caught++; }
-    w.s = statusOv[w.n] ? statusOv[w.n].s : w.s0;
+    const o = statusOv[w.n];
+    if(o && o.s === w.s0){ statusOv[w.n] = {s:null, at:o.at}; caught++; }
+    w.s = statusOv[w.n] && statusOv[w.n].s || w.s0;
   });
   if(caught) LS.set("statusOv", statusOv);
   return caught;
 }
 applyStatus();
 let dataSource = LS.get("source", "기본 단어장");
-let stars = new Set(LS.get("stars", []));
-let wrong = new Set(LS.get("wrong", []));
-let hist = LS.get("hist", {});     // {n:[[테스트 시작 시각(ms), "OX"(발음·뜻, 안 물어본 쪽은 "-")], ...]} 단어별 최근 10회
+// 켜고 끈 시각을 같이 남기는 집합(★·오답 모음). Set처럼 쓰고, 바꾼 뒤 save()
+class FlagSet {
+  constructor(key){ this.key = key; this.m = normState({[key]: LS.get(key, {})})[key]; }
+  has(n){ return !!(this.m[n] && this.m[n][0]); }
+  add(n){ if(this.has(n)) return false; this.m[n] = [1, Date.now()]; return true; }
+  delete(n){ if(!this.has(n)) return false; this.m[n] = [0, Date.now()]; return true; }
+  clear(){ Object.keys(this.m).forEach(n => this.delete(n)); }
+  get size(){ return Object.values(this.m).filter(v => v[0]).length; }
+  save(){ LS.set(this.key, this.m); changed(); }
+}
+let stars = new FlagSet("stars");
+let wrong = new FlagSet("wrong");
+let hist = LS.get("hist", {});     // {n:[[테스트 시작 시각(ms), "OX"(발음·뜻, 안 물어본 쪽은 "-"), 고친 시각], ...]} 단어별 최근 10회
+let histClearedAt = LS.get("histClearedAt", 0);
 const DEFAULT_SCOPE = {from:1, to:170, status:[], topics:[], star:false, wrong:false, hist:"", days:0, exam:"", kind:"", day:""};
 let scope = Object.assign({}, DEFAULT_SCOPE, LS.get("scope", {}));
 if(scope.topic){ scope.topics = [scope.topic]; } delete scope.topic;   // 예전 단일 주제 설정
@@ -352,13 +390,13 @@ function maxExamYear(){
 }
 const EXAM_LABEL = {any:"기출만", multi:"기출 2회 이상", recent:"최근 3년 기출", none:"기출 아님"};
 const KIND_LABEL = {kanji:"한자 단어", kana:"가나 단어"};
-/* 일별 학습 기록 {"2026-10-11": {s:[학습 카드로 본 단어 번호], t:{테스트 시작 시각:[문항 수, 정답 수]}}} */
+/* 일별 학습 기록 {"2026-10-11": {s:[학습 카드로 본 단어 번호], t:{테스트 시작 시각:[문항 수, 정답 수, 고친 시각]}}} */
 let days = LS.get("days", {});
 const dateKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 const dayRec = k => days[k] || (days[k] = {s:[], t:{}});
 const native = name => window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers[name];
 function saveDays(){
-  LS.set("days", days);
+  LS.set("days", days); changed();
   // 맥 앱에서는 Application Support/N3Words/daily_log.csv 로도 자동 저장
   clearTimeout(saveDays._t); saveDays._t = setTimeout(() => { if(native("n3log")) native("n3log").postMessage({text: daysCSV()}); }, 1500);
 }
@@ -380,12 +418,15 @@ function isWeak(h){
 const HIST_LABEL = {never:"테스트 안 함", weak:"취약", pron:"발음만 틀림", mean:"뜻만 틀림"};
 // 한 번의 테스트(id = 시작 시각) 결과를 단어별 기록과 일별 기록에 반영. 같은 id로 다시 부르면 덮어씀
 function recordGrades(id, grades){
+  const now = Date.now();
   grades.forEach(([n, v]) => {
     const h = hist[n] || (hist[n] = []), e = h.find(x => x[0] === id);
-    if(e) e[1] = v; else { h.push([id, v]); h.sort((a, b) => a[0] - b[0]); if(h.length > 10) h.shift(); }
+    if(e){ if(e[1] !== v){ e[1] = v; e[2] = now; } } else { h.push([id, v, now]); h.sort((a, b) => a[0] - b[0]); if(h.length > HIST_MAX) h.shift(); }
   });
   LS.set("hist", hist);
-  dayRec(dateKey(new Date(id))).t[id] = [grades.length, grades.filter(g => vOk(g[1])).length]; saveDays();
+  const t = dayRec(dateKey(new Date(id))).t, q = grades.length, ok = grades.filter(g => vOk(g[1])).length;
+  if(!t[id] || t[id][0] !== q || t[id][1] !== ok) t[id] = [q, ok, now];
+  saveDays();
 }
 function recordTest(){ recordGrades(Date.parse(test.started), test.items.map(n => [n, test.grade[n].p + test.grade[n].m])); sendOutbox(); }
 const dotsHTML = h => (h || []).slice(-5).map(x => `<span class="dot ${vOk(x[1]) ? "d-ok" : vNo(x[1]) ? "d-no" : "d-half"}" title="발음 ${x[1][0]} · 뜻 ${x[1][1]}"></span>`).join("");
@@ -490,11 +531,11 @@ function speak(text, slow){
   speechSynthesis.speak(u);
 }
 function move(d){ if(!deck.length) return; idx = (idx + d + deck.length) % deck.length; renderStudy(); }
-// 학습상태 바꾸기. 시트 값으로 돌아가면 변경 기록을 지움. 범위에서 빠지게 되어도 지금 묶음에서는 바로 빼지 않음
+// 학습상태 바꾸기. 시트 값으로 돌아가면 "시트 따르기"(null)로 남김. 범위에서 빠지게 되어도 지금 묶음에서는 바로 빼지 않음
 function setStatus(n, s){
   const w = byNo(n); if(!w || w.s === s) return;
-  if(s === w.s0) delete statusOv[n]; else statusOv[n] = {s, at:Date.now()};
-  w.s = s; LS.set("statusOv", statusOv);
+  statusOv[n] = {s: s === w.s0 ? null : s, at:Date.now()};
+  w.s = s; LS.set("statusOv", statusOv); changed();
   toast(`No. ${n} 학습상태 ${s}${s === w.s0 ? " (시트와 같아요)" : ` · 시트는 ${w.s0}`}`);
 }
 const nextStatus = s => STATUSES[(STATUSES.indexOf(s) + 1) % STATUSES.length];
@@ -502,7 +543,7 @@ const badgeHTML = (w, attr = "") => `<button class="badge ${stCls(w.s)}${w.s !==
 function toggleStar(){
   const w = deck[idx]; if(!w) return;
   stars.has(w.n) ? stars.delete(w.n) : stars.add(w.n);
-  LS.set("stars", [...stars]); renderStudy();
+  stars.save(); renderStudy();
 }
 
 /* ---------- scope panel ---------- */
@@ -595,7 +636,7 @@ function renderList(){
 $("lQ").oninput = $("lSort").onchange = $("lAll").onchange = renderList;
 $("lBody").onclick = e => {
   const s = e.target.closest("[data-star]");
-  if(s){ const n = +s.dataset.star; stars.has(n) ? stars.delete(n) : stars.add(n); LS.set("stars", [...stars]); s.classList.toggle("on"); return; }
+  if(s){ const n = +s.dataset.star; stars.has(n) ? stars.delete(n) : stars.add(n); stars.save(); s.classList.toggle("on"); return; }
   const st = e.target.closest("[data-st]");
   if(st){ const w = byNo(+st.dataset.st); setStatus(w.n, nextStatus(w.s)); st.outerHTML = badgeHTML(w, `data-st="${w.n}"`); return; }
   const tr = e.target.closest("tr.pick"); if(!tr) return;
@@ -627,32 +668,54 @@ function handleFile(file){
   if(!file) return;
   const r = new FileReader();
   r.onload = () => {
-    try{ importCSV(parseCSV(r.result), file.name); }
+    try{ toast(/\.json$/i.test(file.name) || /^\s*\{/.test(r.result) ? restoreBackup(r.result) : importCSV(parseCSV(r.result), file.name).msg); }
     catch(e){ toast("파일을 읽지 못했어요: " + e.message); }
   };
   r.readAsText(file, "utf-8");
 }
+// 단어장 행(첫 줄 근처에 '번호' 머리글)을 단어 목록으로. 단어장 형식이 아니면 null
+function wordsFromRows(rows){
+  const hi = rows.findIndex(r => r.map(x => String(x).trim()).includes("번호"));
+  if(hi < 0) return null;
+  const H = rows[hi].map(x => String(x).trim()), col = k => H.indexOf(k);
+  if(col("한자/표기") < 0 || col("히라가나") < 0 || col("한국어 뜻") < 0 || col("최종") >= 0) return null;
+  const get = (r, k) => col(k) >= 0 ? String(r[col(k)] ?? "").trim() : "";
+  return rows.slice(hi + 1).filter(r => /^\d+$/.test(get(r, "번호")))
+    .map(r => ({ n:+get(r,"번호"), s:normStatus(get(r,"학습상태")), t:get(r,"주제"), w:get(r,"한자/표기"), k:get(r,"히라가나"),
+      m:get(r,"한국어 뜻"), e:get(r,"예문"), ek:get(r,"예문 한글뜻"), p:get(r,"한글 발음"), memo:get(r,"학습 메모"), d:get(r,"다락원") }))
+    .filter(w => w.w).sort((a, b) => a.n - b.n);
+}
+// 단어 목록을 바꾸고 보던 단어를 유지. 시트가 따라와서 정리한 학습상태 개수를 돌려줌
+function setWords(list, source){
+  const cur = deck[idx]?.n;
+  WORDS = list; dataSource = source;
+  LS.set("words", WORDS); LS.set("source", dataSource);
+  const caught = applyStatus();
+  buildDeck(cur); render(); renderDataInfo();
+  return caught;
+}
+// 단어장 CSV나 채점 CSV를 반영하고 {msg, score?}를 돌려줌 (토스트는 부르는 쪽에서)
 function importCSV(rows, name){
+  const list = wordsFromRows(rows);
+  if(list){
+    if(!list.length) throw new Error("단어 행이 없어요");
+    const caught = setWords(list, `${name} (${new Date().toLocaleDateString("ko-KR")})`);
+    return {msg:`단어 ${list.length}개를 불러왔어요${caught ? ` · 앱에서 바꾼 학습상태 ${caught}개는 시트에 반영돼 있어 정리했어요` : ""}`};
+  }
   const hi = rows.findIndex(r => r.map(x => x.trim()).includes("번호"));
   if(hi < 0) throw new Error("'번호' 열이 없어요");
-  const H = rows[hi].map(x => x.trim()); const col = k => H.indexOf(k);
+  const H = rows[hi].map(x => x.trim()), col = k => H.indexOf(k);
   const body = rows.slice(hi + 1).filter(r => /^\d+$/.test((r[col("번호")] || "").trim()));
   const get = (r, k) => col(k) >= 0 ? (r[col(k)] || "").trim() : "";
-  if(col("한자/표기") >= 0 && col("히라가나") >= 0 && col("한국어 뜻") >= 0 && col("최종") < 0){
-    const list = body.map(r => ({ n:+get(r,"번호"), s:normStatus(get(r,"학습상태")), t:get(r,"주제"), w:get(r,"한자/표기"), k:get(r,"히라가나"),
-      m:get(r,"한국어 뜻"), e:get(r,"예문"), ek:get(r,"예문 한글뜻"), p:get(r,"한글 발음"), memo:get(r,"학습 메모"), d:get(r,"다락원") })).filter(w => w.w);
-    if(!list.length) throw new Error("단어 행이 없어요");
-    list.sort((a,b) => a.n - b.n);
-    WORDS = list; dataSource = `${name} (${new Date().toLocaleDateString("ko-KR")})`;
-    LS.set("words", WORDS); LS.set("source", dataSource);
-    const caught = applyStatus();
-    buildDeck(); render(); renderDataInfo();
-    toast(`단어 ${list.length}개를 불러왔어요${caught ? ` · 앱에서 바꾼 학습상태 ${caught}개는 시트에 반영돼 있어 정리했어요` : ""}`);
-  } else if(["최종","발음 채점","뜻 채점","자가채점(발음)","자가채점(뜻)","자가채점"].some(k => col(k) >= 0)){
-    importScore(body, get, k => col(k) >= 0);
-  } else throw new Error("단어장이나 채점표 형식이 아니에요");
+  if(["최종","발음 채점","뜻 채점","자가채점(발음)","자가채점(뜻)","자가채점"].some(k => col(k) >= 0)){
+    const sc = importScore(body, get, k => col(k) >= 0);
+    return {msg:`채점 ${sc.n}개 반영${sc.cur ? " (지금 결과 화면)" : ""} · 오답 모음 ${sc.add}개 추가, ${sc.rem}개 제외`, score:sc};
+  }
+  throw new Error("단어장이나 채점표 형식이 아니에요");
 }
-// 채점 CSV(내보낸 파일을 AI가 채점해 돌려준 것, 또는 채점표)를 반영. △는 X로 봄
+// 같은 내용이면 같은 값이 나오는 짧은 해시 (테스트ID 없는 채점표를 두 번 넣어도 한 번만 세려고)
+function hashStr(t){ let h = 2166136261; for(let i = 0; i < t.length; i++){ h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); }
+// 채점 CSV(내보낸 파일을 AI가 채점해 돌려준 것, 또는 채점표)를 반영. △는 X로 봄. {n, add, rem, cur}를 돌려줌
 function importScore(body, get, has){
   const pk = ["발음 채점","자가채점(발음)"].find(has), mk = ["뜻 채점","자가채점(뜻)"].find(has);
   const ox = v => /^[OoＯ○◯]$/.test(v) ? "O" : v === "" || v === "-" ? "" : "X";
@@ -662,7 +725,8 @@ function importScore(body, get, has){
     return {n:+get(r, "번호"), g};
   }).filter(r => r.g.p || r.g.m);
   if(!rows.length) throw new Error("채점 결과가 있는 행이 없어요");
-  // 결과 화면에 떠 있는 테스트의 채점이면 그 테스트를 고치고, 아니면 테스트ID(없으면 지금 시각)로 기록을 남김
+  // 결과 화면에 떠 있는 테스트의 채점이면 그 테스트를 고치고, 아니면 테스트ID로 기록을 남김.
+  // 테스트ID가 없으면 처음 넣은 시각을 내용 해시와 같이 기억해 두고, 같은 파일을 다시 넣으면 그 시각을 씀
   const tid = has("테스트ID") ? +get(body[0], "테스트ID") || 0 : 0;
   const cur = test && test.done && (tid ? Date.parse(test.started) === tid : rows.every(r => test.items.includes(r.n))) ? test : null;
   let grades;
@@ -672,47 +736,130 @@ function importScore(body, get, has){
     grades = rows.filter(r => cur.grade[r.n]).map(r => [r.n, cur.grade[r.n].p + cur.grade[r.n].m]);
   } else {
     grades = rows.map(({n, g}) => [n, (g.p || "-") + (g.m || "-")]);
-    recordGrades(tid || Date.now(), grades);
+    let id = tid;
+    if(!id){
+      const seen = LS.get("imported", {}), key = hashStr(grades.map(g => g.join(":")).join(","));
+      id = seen[key] || (seen[key] = Date.now()); LS.set("imported", seen);
+    }
+    recordGrades(id, grades);
   }
   let add = 0, rem = 0;
   grades.forEach(([n, v]) => { if(vOk(v)){ if(wrong.delete(n)) rem++; } else { if(!wrong.has(n)) add++; wrong.add(n); } });
-  LS.set("wrong", [...wrong]); render(); renderDataInfo();
-  toast(`채점 ${grades.length}개 반영${cur ? " (지금 결과 화면)" : ""} · 오답 모음 ${add}개 추가, ${rem}개 제외`);
+  wrong.save(); render(); renderDataInfo();
+  return {n:grades.length, add, rem, cur:!!cur};
 }
 /* AI 채점 폴더 (맥 앱): Application Support/N3Words/grading/ 의 outbox → AI → inbox → done */
 // 쓰기 테스트의 채점용 CSV를 outbox에 자동으로 써 둠. O/X를 고치면 같은 파일을 덮어씀
 function sendOutbox(){
   if(native("n3grade") && test && test.done && !TYPES[typeOf(test)].o) native("n3grade").postMessage({op:"out", name:`test_raw_${Date.parse(test.started)}.csv`, text:testCSV()});
 }
-// 앱이 inbox에서 읽어 넘겨준 파일들을 차례로 반영. 반영한 파일은 done으로 옮기게 하고, 못 읽은 파일은 그대로 둠
+// 앱이 inbox에서 읽어 넘겨준 파일들을 한 번에 반영하고 결과를 토스트 하나로 알림. 반영한 파일은 done으로 옮기게 하고, 못 읽은 파일은 그대로 둠
 function gradeInbox(files){
-  const next = () => {
-    const f = files.shift(); if(!f) return;
-    try{ importCSV(parseCSV(f.text), f.name); native("n3grade").postMessage({op:"done", name:f.name}); }
-    catch(e){ toast(`inbox의 ${f.name} 파일을 읽지 못했어요: ${e.message}`); }
-    if(files.length) setTimeout(next, 2800);   // 토스트가 하나씩 보이도록
-  };
-  next();
+  let ok = 0, n = 0, add = 0, rem = 0; const bad = [];
+  files.forEach(f => {
+    try{
+      const r = importCSV(parseCSV(f.text), f.name);
+      ok++; if(r.score){ n += r.score.n; add += r.score.add; rem += r.score.rem; }
+      native("n3grade").postMessage({op:"done", name:f.name});
+    } catch(e){ bad.push(`${f.name}(${e.message})`); }
+  });
+  const parts = [];
+  if(ok) parts.push(`inbox 파일 ${ok}개 반영 · 채점 ${n}개 · 오답 모음 ${add}개 추가, ${rem}개 제외`);
+  if(bad.length) parts.push(`읽지 못한 파일: ${bad.join(", ")}`);
+  if(parts.length) toast(parts.join(" / "));
 }
+if(native("n3backup")) $("bkAuto").hidden = false;
 if(native("n3grade")){ $("gradeDir").hidden = false; $("gradeOpen").onclick = () => native("n3grade").postMessage({op:"open"}); }
 function renderDataInfo(){
   $("dataInfo").textContent = `현재: ${dataSource} · ${WORDS.length}단어 · 오답 모음 ${wrong.size}개 · 테스트 기록 ${Object.keys(hist).length}개`;
-  const n = Object.keys(statusOv).length;
+  const n = ovCount();
   $("stRow").hidden = !n;
-  $("stInfo").innerHTML = `<b>앱에서 바꾼 학습상태 ${n}개</b>: 구글 시트의 학습상태 열에 옮겨 적은 뒤 단어장 CSV를 다시 불러오면 자동으로 정리돼요.`;
+  $("stInfo").innerHTML = `<b>앱에서 바꾼 학습상태 ${n}개</b>: ${syncCfg().url ? "동기화하면 구글 시트의 학습상태 열에 바로 적혀요." : "구글 시트의 학습상태 열에 옮겨 적은 뒤 단어장 CSV를 다시 불러오면 자동으로 정리돼요."}`;
+  renderSync();
 }
 // 바꾼 학습상태만 번호순으로. 학습상태 열은 시트 표기("1. Pass") 그대로
 $("stExport").onclick = () => {
   const lines = [["번호","한자/표기","히라가나","시트 학습상태","바꾼 학습상태","바꾼 날짜"].join(",")];
-  Object.keys(statusOv).map(Number).sort((a, b) => a - b).forEach(n => {
-    const w = byNo(n), o = statusOv[n]; if(!w) return;
-    lines.push([n, w.w, w.k, stSheet(w.s0), stSheet(o.s), dateKey(new Date(o.at))].map(csvCell).join(","));
+  WORDS.filter(w => w.s !== w.s0).forEach(w => {
+    const o = statusOv[w.n] || {};
+    lines.push([w.n, w.w, w.k, stSheet(w.s0), stSheet(w.s), o.at ? dateKey(new Date(o.at)) : ""].map(csvCell).join(","));
   });
   saveFile(`status_${dateKey()}.csv`, "﻿" + lines.join("\n"));
 };
 $("stReset").onclick = e => confirmTwice(e.currentTarget, "한 번 더 누르면 되돌려요", () => {
-  statusOv = {}; LS.set("statusOv", statusOv); applyStatus(); buildDeck(deck[idx]?.n); render(); renderDataInfo(); toast("학습상태를 시트 값으로 되돌렸어요");
+  const now = Date.now(); WORDS.filter(w => w.s !== w.s0).forEach(w => statusOv[w.n] = {s:null, at:now});
+  LS.set("statusOv", statusOv); changed(); applyStatus(); buildDeck(deck[idx]?.n); render(); renderDataInfo(); toast("학습상태를 시트 값으로 되돌렸어요");
 });
+
+/* ---------- 백업 · 동기화 ---------- */
+// 기기 사이에 옮기는 학습 기록 (단어장과 보기 설정은 빼고)
+function getState(){ return {v:1, stars:stars.m, wrong:wrong.m, hist, histClearedAt, days, status:statusOv}; }
+// 합친 상태를 앱에 넣음. 단어장 위의 학습상태도 다시 입힘
+function putState(x){
+  const o = normState(x);
+  stars.m = o.stars; wrong.m = o.wrong; hist = o.hist; histClearedAt = o.histClearedAt; days = o.days; statusOv = o.status;
+  LS.set("stars", stars.m); LS.set("wrong", wrong.m); LS.set("hist", hist); LS.set("histClearedAt", histClearedAt); LS.set("days", days); LS.set("statusOv", statusOv);
+  applyStatus();
+}
+function backupJSON(){ return JSON.stringify({app:"n3words", savedAt:new Date().toISOString(), state:getState()}); }
+// 백업 파일은 덮어쓰지 않고 지금 기록과 합침 (지운 것·고친 것은 나중에 한 쪽을 따름)
+function restoreBackup(text){
+  const j = JSON.parse(text);
+  if(!j || j.app !== "n3words" || !j.state) throw new Error("N3 단어 백업 파일이 아니에요");
+  putState(mergeState(getState(), j.state)); changed();
+  buildDeck(deck[idx]?.n); render(); renderDataInfo();
+  return `백업(${String(j.savedAt || "").slice(0, 10)})을 지금 기록과 합쳤어요`;
+}
+$("bkExport").onclick = () => saveFile(`n3words_backup_${dateKey()}.json`, backupJSON());
+// 기록이 바뀌면 잠시 뒤 맥 앱 자동 백업과 동기화를 함
+function changed(){
+  clearTimeout(changed._b); changed._b = setTimeout(() => { if(native("n3backup")) native("n3backup").postMessage({name:dateKey(), text:backupJSON()}); }, 3000);
+  if(syncCfg().url){ clearTimeout(changed._s); changed._s = setTimeout(() => syncNow(false), 15000); }
+}
+
+// 구글 시트 동기화: 시트에 붙인 Apps Script 웹 앱(scripts/sync.gs)과 주고받음. 주소와 비밀 값은 기기마다 한 번 넣음
+const syncCfg = () => LS.get("sync", {});
+let syncing = null;
+function renderSync(){
+  const c = syncCfg();
+  $("syUrl").value = c.url || ""; $("syToken").value = c.token || "";
+  $("syNow").disabled = !c.url || !!syncing;
+  $("syInfo").textContent = syncing ? "동기화하는 중…" : c.err ? `마지막 시도 실패: ${c.err}` : c.at ? `마지막 동기화 ${new Date(c.at).toLocaleString("ko-KR")}` : c.url ? "아직 동기화하지 않았어요" : "";
+}
+function syncNow(manual){
+  const c = syncCfg();
+  if(!c.url || syncing) return syncing;
+  const sent = getState();
+  syncing = fetch(c.url, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},   // text/plain이라야 Apps Script가 preflight 없이 받음
+      body:JSON.stringify({token:c.token, state:sent, wordsVer:LS.get("wordsVer", "")})})
+    .then(r => { if(!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    .then(j => {
+      if(!j.ok) throw new Error(j.error || "알 수 없는 오류");
+      // 보내는 사이에 바뀐 것까지 합침
+      putState(mergeState(getState(), j.state));
+      let msg = "동기화했어요";
+      if(j.words){
+        const list = wordsFromRows(j.words);
+        if(list && list.length){ LS.set("wordsVer", j.wordsVer); setWords(list, "구글 시트"); msg += ` · 시트 단어장 ${list.length}개`; }
+      } else { buildDeck(deck[idx]?.n); render(); }
+      if(j.wrote) msg += ` · 학습상태 ${j.wrote}개를 시트에 적었어요`;
+      LS.set("sync", Object.assign(syncCfg(), {at:Date.now(), err:""}));
+      if(manual || j.wrote) toast(msg);
+    })
+    .catch(e => { LS.set("sync", Object.assign(syncCfg(), {err:e.message})); if(manual) toast("동기화하지 못했어요: " + e.message); })
+    .finally(() => { syncing = null; renderSync(); renderDataInfo(); });
+  renderSync();
+  return syncing;
+}
+$("sySave").onclick = () => {
+  const url = $("syUrl").value.trim(), token = $("syToken").value.trim();
+  if(url && !/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(url)) return toast("Apps Script 웹 앱 주소(…/exec)를 넣어 주세요");
+  LS.set("sync", url ? {url, token} : {}); renderDataInfo();
+  if(url) syncNow(true); else toast("동기화를 껐어요");
+};
+$("syNow").onclick = () => syncNow(true);
+// 앱으로 돌아오거나 켤 때 받아 오고, 떠날 때 보냄
+document.addEventListener("visibilitychange", () => { if(syncCfg().url) syncNow(false); });
 $("drop").onclick = () => $("file").click();
 $("file").onchange = e => { handleFile(e.target.files[0]); e.target.value = ""; };
 ["dragenter","dragover"].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); document.body.classList.add("dragging"); }));
@@ -720,14 +867,14 @@ $("file").onchange = e => { handleFile(e.target.files[0]); e.target.value = ""; 
 document.addEventListener("drop", e => { const f = e.dataTransfer?.files?.[0]; if(f) handleFile(f); });
 $("restoreDefault").onclick = () => {
   WORDS = DEFAULT_WORDS; dataSource = "기본 단어장";
-  try{ localStorage.removeItem("n3v2_words"); }catch(e){} LS.set("source", dataSource);
+  try{ localStorage.removeItem("n3v2_words"); }catch(e){} LS.set("source", dataSource); LS.set("wordsVer", "");
   applyStatus(); buildDeck(); render(); renderDataInfo(); toast("기본 단어장으로 되돌렸어요");
 };
 $("clearWrong").onclick = e => confirmTwice(e.currentTarget, "한 번 더 누르면 비워요", () => {
-  wrong.clear(); LS.set("wrong", []); render(); renderDataInfo(); toast("오답 모음을 비웠어요");
+  wrong.clear(); wrong.save(); render(); renderDataInfo(); toast("오답 모음을 비웠어요");
 });
 $("clearHist").onclick = e => confirmTwice(e.currentTarget, "한 번 더 누르면 지워요", () => {
-  hist = {}; LS.set("hist", hist); buildDeck(); render(); renderDataInfo(); toast("테스트 기록을 지웠어요");
+  hist = {}; histClearedAt = Date.now(); LS.set("hist", hist); LS.set("histClearedAt", histClearedAt); changed(); buildDeck(); render(); renderDataInfo(); toast("테스트 기록을 지웠어요");
 });
 
 /* ---------- test mode ---------- */
@@ -1002,7 +1149,7 @@ function renderReview(){
   $("rWrong").onclick = () => {
     let add = 0, rem = 0;
     test.items.forEach(n => { if(gOk(test.grade[n])){ if(wrong.delete(n)) rem++; } else { if(!wrong.has(n)) add++; wrong.add(n); } });
-    LS.set("wrong", [...wrong]); toast(`오답 모음: ${add}개 추가, ${rem}개 제외 (총 ${wrong.size}개)`);
+    wrong.save(); toast(`오답 모음: ${add}개 추가, ${rem}개 제외 (총 ${wrong.size}개)`);
   };
   $("rRetry").onclick = () => {
     const items = test.items.filter(n => !gOk(test.grade[n]));
@@ -1127,6 +1274,9 @@ buildDeck(LS.get("pos", null));
 applyScale();
 render();
 if(native("n3grade")) native("n3grade").postMessage({op:"scan"});   // 켤 때 inbox 확인 (창으로 돌아올 때는 앱이 알아서 확인)
+if(syncCfg().url) syncNow(false);
+// 웹으로 올린 경우에만 오프라인용 service worker (맥 앱·파일로 열 때는 건너뜀)
+if("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 window.addEventListener("resize", fitWord);
 if(document.fonts && document.fonts.ready) document.fonts.ready.then(fitWord);
 </script>

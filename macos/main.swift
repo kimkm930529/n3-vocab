@@ -20,6 +20,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKURLSchemeHandler, WK
         cfg.userContentController.add(self, name: "n3save")
         cfg.userContentController.add(self, name: "n3log")
         cfg.userContentController.add(self, name: "n3grade")
+        cfg.userContentController.add(self, name: "n3backup")
         if let js = migrationScript() {
             cfg.userContentController.addUserScript(WKUserScript(source: js, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         }
@@ -86,6 +87,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKURLSchemeHandler, WK
         }
     }
 
+    // 학습 기록 자동 백업: backups/n3words_<날짜>.json 하나를 그날 계속 덮어쓰고, 최근 14일 치만 남김
+    func saveBackup(_ text: String, day: String) {
+        guard day.range(of: #"^\d{4}-\d{2}-\d{2}$"#, options: .regularExpression) != nil else { return }
+        let fm = FileManager.default, dir = dataDir.appendingPathComponent("backups")
+        try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        try? text.write(to: dir.appendingPathComponent("n3words_\(day).json"), atomically: true, encoding: .utf8)
+        let old = ((try? fm.contentsOfDirectory(atPath: dir.path)) ?? []).filter { $0.hasPrefix("n3words_") && $0.hasSuffix(".json") }.sorted().dropLast(14)
+        old.forEach { try? fm.removeItem(at: dir.appendingPathComponent($0)) }
+    }
+
     // 예전 Chrome 창 버전의 데이터를 옮김 (scripts/migrate_from_chrome.py가 만든 N3Words/migrate.json).
     // 파일의 수정 시각을 표시로 남겨 같은 파일은 한 번만 적용함
     func migrationScript() -> String? {
@@ -123,6 +134,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKURLSchemeHandler, WK
             try? text.write(to: dataDir.appendingPathComponent("daily_log.csv"), atomically: true, encoding: .utf8)
             return
         }
+        if message.name == "n3backup" { saveBackup(text, day: body["name"] as? String ?? ""); return }
         guard let name = body["name"] as? String else { return }
         let panel = NSSavePanel()
         panel.nameFieldStringValue = name
