@@ -137,13 +137,50 @@ td .badge{margin-left:0;white-space:nowrap} td .star{font-size:16px;padding:0}
 .ox button{border:1px solid var(--line);background:var(--card);border-radius:7px;padding:3px 8px;cursor:pointer;font-size:12px;font-weight:700;color:var(--sub)}
 .ox button.onO{background:var(--good);border-color:var(--good);color:#fff}
 .ox button.onX{background:var(--fail);border-color:var(--fail);color:#fff}
+/* panels · modal · help */
+.phead{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.x{border:0;background:none;font-size:18px;line-height:1;cursor:pointer;color:var(--sub);padding:4px 6px;border-radius:8px}
+.x:hover{background:var(--soft);color:var(--ink)}
+.chip.help,.qmark{font-weight:700}
+.qmark{border:1px solid var(--line);background:var(--soft);color:var(--sub);border-radius:50%;width:20px;height:20px;font-size:12px;padding:0;cursor:pointer;margin-left:4px;vertical-align:1px}
+.linkbtn{border:0;background:none;padding:0;color:var(--accent);text-decoration:underline;cursor:pointer;font:inherit}
+.btn.danger{color:var(--fail)} .danger-h{color:var(--fail)}
+.tip{border-color:var(--accent)}
+.sync-dot::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:var(--not);vertical-align:1px}
+.sync-dot.ok::before{background:var(--good)} .sync-dot.err::before{background:var(--fail)}
+.sync-dot.busy::before{background:var(--ing);animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.25}}
+.modal{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px}
+.modal>.box{position:relative;background:var(--card);border-radius:16px;width:100%;max-width:640px;max-height:88vh;overflow:auto;padding:20px 22px 22px;display:flex;flex-direction:column;gap:12px;line-height:1.6;font-size:14px}
+.modal h2{margin:0;font-size:18px;padding-right:30px} .modal h4{margin:8px 0 0;font-size:14px}
+.modal .x{position:absolute;top:12px;right:12px}
+.modal ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:10px} .modal p{margin:0}
+.modal code{background:var(--soft);border-radius:5px;padding:1px 5px;font-size:12px}
+.modal table{min-width:0;font-size:13px} .modal td,.modal th{padding:5px 8px}
+.qr{display:block;width:224px;height:224px;padding:12px;margin:4px auto;image-rendering:pixelated;background:#fff;border-radius:8px}   /* 흰 여백이 있어야 카메라가 잘 읽음 */
+.code{width:100%;font:12px ui-monospace,monospace;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--soft);color:var(--ink);word-break:break-all}
+/* 학습상태 고르기 메뉴 */
+.stmenu{position:absolute;z-index:15;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.15);padding:6px;display:flex;flex-direction:column;min-width:190px}
+.stmenu button{display:flex;align-items:center;gap:8px;border:0;background:none;text-align:left;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:14px}
+.stmenu button:hover,.stmenu button:focus-visible{background:var(--soft)}
+.stmenu button.on{font-weight:700} .stmenu small{color:var(--sub);margin-left:auto;padding-left:10px}
+.stmenu .sheet{font-size:11px;color:var(--sub);padding:4px 10px 2px}
+/* 듣기 아이콘 */
+.say{border:0;background:none;cursor:pointer;font-size:16px;padding:2px 6px;border-radius:8px;opacity:.6;vertical-align:middle}
+.say:hover{opacity:1;background:var(--soft)}
+/* 고르기 테스트 바로 채점 */
+.opt.right{border-color:var(--good);box-shadow:0 0 0 2px var(--good);background:var(--ok-bg)}
+.opt.miss{border-color:var(--fail);box-shadow:0 0 0 2px var(--fail);background:var(--no-bg)}
 @media (max-width:560px){.card{padding:20px 16px}.answers,.opts{grid-template-columns:1fr}.keys{display:none}
   /* 폰: 탭을 좁게, 학습 버튼은 화면 아래에 붙여 엄지로 누르기 쉽게, 5개씩 쓰기는 한 줄에 하나씩 */
   .tab{padding:7px 12px}
   #study .nav{position:sticky;bottom:0;z-index:1;background:var(--bg);padding:10px 0 max(6px, env(safe-area-inset-bottom))}
   #study .nav{gap:6px} #study .nav .btn{flex:1;min-width:0;padding:12px 2px;font-size:13px;white-space:nowrap}
   .qgrid{grid-template-columns:1fr}.qgrid .qw{margin-top:8px}
-  .search{min-width:0}}
+  .search{min-width:0}
+  /* 도움말 창은 아래에서 올라오는 시트로, 토스트는 아래 버튼을 가리지 않게 */
+  .modal{align-items:flex-end;padding:0} .modal>.box{border-radius:16px 16px 0 0;max-height:92vh;padding-bottom:max(22px, env(safe-area-inset-bottom))}
+  .toast{bottom:calc(84px + env(safe-area-inset-bottom))}}
 </style>
 </head>
 <body>
@@ -156,14 +193,24 @@ td .badge{margin-left:0;white-space:nowrap} td .star{font-size:16px;padding:0}
       <button class="tab" id="tabLog">기록</button>
     </div>
     <div class="row">
+      <button class="chip sync-dot" id="syncDot" hidden></button>
       <button class="chip" id="sizeBtn" title="+ / −"></button>
       <button class="chip" id="scopeBtn">범위 설정</button>
-      <button class="chip" id="importBtn">데이터</button>
+      <button class="chip" id="importBtn">설정·데이터</button>
+      <button class="chip help" id="helpBtn" title="도움말 (?)" aria-label="도움말">?</button>
+    </div>
+  </div>
+
+  <div class="panel" id="welcome" hidden></div>
+  <div class="panel tip" id="iosHint" hidden>
+    <div class="row" style="justify-content:space-between;flex-wrap:nowrap;align-items:flex-start">
+      <span class="hint"><b>iPhone에 앱으로 설치하기</b>: 아래쪽 <b>공유</b> 버튼 → <b>홈 화면에 추가</b>를 누르면 앱처럼 열리고 오프라인에서도 쓸 수 있어요. 설치한 앱은 Safari와 기록을 따로 쓰니, 동기화는 설치한 앱에서 설정해 주세요.</span>
+      <button class="x" id="iosHintX" aria-label="닫기">✕</button>
     </div>
   </div>
 
   <div class="panel" id="scopePanel" hidden>
-    <h3>볼 단어 고르기</h3>
+    <div class="phead"><h3>볼 단어 고르기</h3><button class="x" data-close="scopePanel" aria-label="닫기 (Esc)" title="닫기 (Esc)">✕</button></div>
     <div class="field"><label for="fFrom">번호 범위</label>
       <div class="row"><input class="num" id="fFrom" type="number" min="1"> ~ <input class="num" id="fTo" type="number" min="1">
         <button class="chip" id="fPrevChunk">◀ 이전 묶음</button><button class="chip" id="fNextChunk">다음 묶음 ▶</button><button class="chip" id="fAll">전체</button></div></div>
@@ -207,25 +254,29 @@ td .badge{margin-left:0;white-space:nowrap} td .star{font-size:16px;padding:0}
   </div>
 
   <div class="panel" id="importPanel" hidden>
-    <h3>동기화 (구글 시트)</h3>
-    <div class="hint">단어장 시트에 <b>Apps Script</b>(<code>dist/sync.gs</code>)를 붙여 웹 앱으로 배포하면, 맥과 폰이 같은 ★·오답·테스트 기록·일별 기록을 쓰고 단어장도 시트에서 바로 받아 와요. 앱에서 바꾼 학습상태는 시트에 적혀요. 방법은 README의 "동기화"를 봐 주세요.</div>
+    <div class="phead"><h3>동기화 (구글 시트) <button class="qmark" id="syGuideBtn" aria-label="동기화 설정 방법" title="설정 방법">?</button></h3><button class="x" data-close="importPanel" aria-label="닫기 (Esc)" title="닫기 (Esc)">✕</button></div>
+    <div class="hint" id="syIntro">맥과 폰이 같은 ★·오답 모음·테스트 기록을 쓰고, 단어장은 구글 시트에서 바로 받아 와요. 처음이면 <button class="linkbtn" id="syGuideLink">설정 방법</button>을 따라 해 주세요 (10분 정도, 한 번만).</div>
     <div class="row">
-      <input class="search" id="syUrl" type="url" autocomplete="off" style="flex:1 1 260px" placeholder="https://script.google.com/macros/s/…/exec">
-      <input class="search" id="syToken" type="password" autocomplete="off" placeholder="비밀 값" style="flex:0 1 160px;min-width:120px">
+      <input class="search" id="syUrl" type="url" autocomplete="off" style="flex:1 1 260px" placeholder="웹 앱 주소(…/exec) 또는 연결 링크">
+      <input class="search" id="syToken" type="password" autocomplete="off" placeholder="비밀 값" title="Apps Script에서 setup을 실행하면 나오는 값" style="flex:0 1 160px;min-width:120px">
       <button class="btn" id="sySave">저장</button>
       <button class="btn primary" id="syNow">지금 동기화</button>
     </div>
-    <span class="hint" id="syInfo"></span>
+    <div class="row" style="justify-content:space-between">
+      <span class="hint" id="syInfo"></span>
+      <button class="btn" id="syPhone" hidden>📱 다른 기기 연결</button>
+    </div>
+
     <h3>파일 불러오기 · 백업</h3>
     <div class="drop" id="drop">CSV나 백업(JSON) 파일을 여기에 끌어다 놓거나 <u>눌러서 선택</u><input type="file" id="file" accept=".csv,text/csv,.json,application/json" hidden></div>
     <div class="hint">
-      <b>단어장 CSV</b>: 구글 시트에서 파일 → 다운로드 → CSV. 번호·학습상태·주제·한자/표기·히라가나·한국어 뜻·예문·예문 한글뜻·한글 발음 열을 읽어 단어 목록을 교체해요.<br>
-      <b>채점 CSV</b>: 테스트 결과에서 내보낸 CSV를 AI가 채점해 돌려준 파일(또는 채점표)을 넣으면 O/X를 테스트 기록에 반영하고, 틀린 단어는 오답 모음에 넣고 맞힌 단어는 빼요. △는 틀린 것으로 봐요.<br>
-      <b>백업 JSON</b>: ★·오답 모음·테스트 기록·일별 기록·바꾼 학습상태를 담아요. 다시 넣으면 지금 기록과 합쳐요(덮어쓰지 않아요).<span id="bkAuto" hidden> 맥 앱은 <b>~/Library/Application Support/N3Words/backups/</b>에 날짜별로 자동 백업해요(최근 14일).</span>
+      <b>단어장 CSV</b>: 구글 시트에서 파일 → 다운로드 → CSV. 단어 목록을 바꿔요. 동기화를 켜면 필요 없어요.<br>
+      <b>채점 CSV</b>: 테스트 결과에서 내보낸 CSV를 AI가 채점해 돌려준 파일(또는 채점표). O/X를 테스트 기록에 반영하고 오답 모음을 고쳐요. △는 틀린 것으로 봐요.<br>
+      <b>백업 JSON</b>: ★·오답 모음·테스트 기록·일별 기록·바꾼 학습상태. 다시 넣으면 지금 기록과 합쳐요(덮어쓰지 않아요).<span id="bkAuto" hidden> 맥 앱은 <b>~/Library/Application Support/N3Words/backups/</b>에 날짜별로 자동 백업해요(최근 14일).</span>
     </div>
-    <div class="row" id="gradeDir" style="justify-content:space-between" hidden>
-      <span class="hint"><b>AI 채점 폴더</b>: 쓰기 테스트를 마치면 채점용 CSV가 <b>~/Library/Application Support/N3Words/grading/outbox</b>에 자동으로 생겨요. 채점된 CSV를 <b>inbox</b>에 넣어 두면 앱을 켜거나 창으로 돌아올 때 반영하고 <b>done</b>으로 옮겨요.</span>
-      <button class="btn" id="gradeOpen">폴더 열기</button>
+    <div class="row" style="justify-content:space-between">
+      <span class="hint" id="dataInfo"></span>
+      <button class="btn" id="bkExport">백업 내보내기</button>
     </div>
     <div class="row" id="stRow" style="justify-content:space-between" hidden>
       <span class="hint" id="stInfo"></span>
@@ -234,14 +285,21 @@ td .badge{margin-left:0;white-space:nowrap} td .star{font-size:16px;padding:0}
         <button class="btn" id="stReset">모두 시트 값으로 되돌리기</button>
       </div>
     </div>
-    <div class="row" style="justify-content:space-between">
-      <span class="hint" id="dataInfo"></span>
+    <div id="gradeDir" hidden>
+      <h3>AI 채점 폴더 (맥 앱)</h3>
+      <div class="hint">쓰기 테스트를 마치면 채점용 CSV가 <b>~/Library/Application Support/N3Words/grading/outbox</b>에 생겨요. Claude에게 채점을 부탁하고, 채점된 CSV가 <b>inbox</b>에 들어오면 앱을 켜거나 창으로 돌아올 때 반영한 뒤 <b>done</b>으로 옮겨요.</div>
       <div class="row">
-        <button class="btn" id="bkExport">백업 내보내기</button>
-        <button class="btn" id="clearHist">테스트 기록 지우기</button>
-        <button class="btn" id="clearWrong">오답 모음 비우기</button>
-        <button class="btn" id="restoreDefault">기본 단어장으로 되돌리기</button>
+        <button class="btn" id="gradeOpen">폴더 열기</button>
+        <button class="btn" id="gradeAsk">Claude에게 보낼 문장 복사</button>
       </div>
+    </div>
+
+    <h3 class="danger-h">초기화</h3>
+    <div class="hint">되돌릴 수 없어요. 누르면 버튼이 한 번 더 확인해요. 지우기 전에 백업을 내보내 두면 안전해요.</div>
+    <div class="row">
+      <button class="btn danger" id="clearHist">테스트 기록 지우기</button>
+      <button class="btn danger" id="clearWrong">오답 모음 비우기</button>
+      <button class="btn danger" id="restoreDefault">기본 단어장으로 되돌리기</button>
     </div>
   </div>
 
@@ -258,7 +316,7 @@ td .badge{margin-left:0;white-space:nowrap} td .star{font-size:16px;padding:0}
       <button class="btn" id="speakBtn">듣기</button>
       <button class="btn" id="next">다음 →</button>
     </div>
-    <div class="keys" style="margin-top:10px"><kbd>←</kbd> <kbd>→</kbd> 이동 · <kbd>Space</kbd> 뜻 가리기 · <kbd>F</kbd> ★ 표시 · <kbd>S</kbd> 섞기 · <kbd>P</kbd> 듣기 · <kbd>E</kbd> 예문 듣기 (<kbd>Shift</kbd>와 같이 누르면 천천히) · <kbd>1</kbd>–<kbd>4</kbd> 학습상태 Pass·Good·Fail·Not Yet · <kbd>Home</kbd> <kbd>End</kbd> 처음/끝 · <kbd>+</kbd> <kbd>−</kbd> 글자 크기 · <kbd>/</kbd> 찾기</div>
+    <div class="keys" style="margin-top:10px"><kbd>←</kbd> <kbd>→</kbd> 이동 · <kbd>Space</kbd> 뜻 가리기 · <kbd>P</kbd> 듣기 · <kbd>E</kbd> 예문 듣기 · <kbd>1</kbd>–<kbd>4</kbd> 학습상태 · <kbd>F</kbd> ★ · <kbd>?</kbd> 모든 단축키</div>
   </section>
 
   <!-- list -->
@@ -302,7 +360,29 @@ function confirmTwice(btn, warn, fn){
   }
   btn.dataset.armed = ""; btn.textContent = btn.dataset.label; fn();
 }
-function toast(msg){ const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 2600); }
+// 긴 문장은 읽을 시간만큼 오래 보여 줌
+function toast(msg){ const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), Math.min(8000, Math.max(2600, msg.length * 70))); }
+// 도움말 같은 창. 닫기 버튼·바깥 누르기·Esc로 닫힘
+function openModal(html, onOpen){
+  closeModal();
+  const m = document.createElement("div"); m.className = "modal"; m.id = "modal";
+  m.innerHTML = `<div class="box" role="dialog" aria-modal="true"><button class="x" aria-label="닫기 (Esc)" title="닫기 (Esc)">✕</button>${html}</div>`;
+  m.onclick = e => { if(e.target === m || e.target.closest(".box > .x")) closeModal(); };
+  document.body.appendChild(m); m.querySelector(".box").focus?.();
+  if(onOpen) onOpen(m);
+  return m;
+}
+function closeModal(){ const m = $("modal"); if(m) m.remove(); }
+// 클립보드 복사. 맥 앱(WKWebView)처럼 clipboard API가 막힌 곳은 예전 방식으로
+// 복사하지 못하면 onFail()로 알려 줌 (직접 선택해 복사할 수 있게 글자를 보여 주는 용도)
+function copyText(text, done = "복사했어요", onFail){
+  const fallback = () => {
+    const ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select(); let ok = false; try{ ok = document.execCommand("copy"); }catch(e){} ta.remove();
+    if(ok) toast(done); else { toast("자동으로 복사하지 못했어요. 직접 선택해서 복사해 주세요"); if(onFail) onFail(); }
+  };
+  if(navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(() => toast(done), fallback); else fallback();
+}
 
 /* ---------- state ---------- */
 // 내장 단어장이 바뀐 새 빌드에서는 예전에 불러온 CSV보다 내장 단어장을 우선함
@@ -478,17 +558,18 @@ function renderStudy(){
       <div class="word jp">${esc(w.w)}</div>
       <div class="reveal">
         ${w.w === w.k ? "" : `<div class="kana jp">${esc(w.k)}</div>`}
-        <div class="pron">[${esc(w.p)}]</div>
+        <div class="pron">[${esc(w.p)}] <button class="say" id="sayW" title="듣기 (P, Shift+P 천천히)" aria-label="단어 듣기">🔊</button></div>
       </div>
     </div>
     <div class="meaning reveal">${esc(w.m)}</div>
-    <div class="hint-reveal">Space를 눌러 발음·뜻 보기</div>
-    ${w.e ? `<div class="ex reveal"><div class="j jp" id="exJ" title="눌러서 듣기">${esc(w.e)}</div><div class="k">${esc(w.ek)}</div></div>` : ""}
+    <div class="hint-reveal">카드를 누르거나 Space를 눌러 발음·뜻 보기</div>
+    ${w.e ? `<div class="ex reveal"><div class="j jp" id="exJ" title="눌러서 듣기 (E, Shift+E 천천히)">${esc(w.e)} <span class="say" aria-hidden="true">🔊</span></div><div class="k">${esc(w.ek)}</div></div>` : ""}
     ${w.memo ? `<div class="memo reveal">기출 ${esc(w.memo)}</div>` : ""}
     ${recHTML(w.n)}`;
   $("starBtn").onclick = e => { e.stopPropagation(); toggleStar(); };
-  $("stBtn").onclick = e => { e.stopPropagation(); setStatus(w.n, nextStatus(w.s)); renderStudy(); };
-  if($("exJ")) $("exJ").onclick = e => speak(w.e, e.shiftKey);
+  $("stBtn").onclick = e => { e.stopPropagation(); openStatusMenu(e.currentTarget, w.n, renderStudy); };
+  $("sayW").onclick = e => { e.stopPropagation(); speak(w.k || w.w, e.shiftKey); };
+  if($("exJ")) $("exJ").onclick = e => { e.stopPropagation(); speak(w.e, e.shiftKey); };
   fitWord();
   $("posText").textContent = `${idx+1} / ${deck.length}`;
   $("bar").style.width = ((idx+1)/deck.length*100) + "%";
@@ -509,7 +590,7 @@ const SCALES = [1, 1.25, 1.5], SCALE_LABEL = ["보통", "크게", "아주 크게
 function applyScale(){
   if(!SCALES.includes(scale)) scale = 1;
   document.documentElement.style.setProperty("--scale", scale);
-  $("sizeBtn").textContent = "글자 " + SCALE_LABEL[SCALES.indexOf(scale)];
+  $("sizeBtn").textContent = "글자 크기: " + SCALE_LABEL[SCALES.indexOf(scale)];
   LS.set("scale", scale); fitWord();
 }
 function stepScale(d){
@@ -538,8 +619,25 @@ function setStatus(n, s){
   w.s = s; LS.set("statusOv", statusOv); changed();
   toast(`No. ${n} 학습상태 ${s}${s === w.s0 ? " (시트와 같아요)" : ` · 시트는 ${w.s0}`}`);
 }
-const nextStatus = s => STATUSES[(STATUSES.indexOf(s) + 1) % STATUSES.length];
-const badgeHTML = (w, attr = "") => `<button class="badge ${stCls(w.s)}${w.s !== w.s0 ? " ov" : ""}" ${attr} title="눌러서 바꾸기${w.s !== w.s0 ? ` · 시트: ${esc(w.s0)}` : ""}">${esc(w.s)}</button>`;
+const STATUS_DESC = {"Pass":"완전히 앎", "Good":"대체로 앎", "Fail":"틀림", "Not Yet":"아직 안 봄"};
+const badgeHTML = (w, attr = "") => `<button class="badge ${stCls(w.s)}${w.s !== w.s0 ? " ov" : ""}" ${attr} title="${esc(STATUS_DESC[w.s])} · 눌러서 바꾸기${w.s !== w.s0 ? ` · 시트: ${esc(w.s0)}` : ""}">${esc(w.s)}</button>`;
+// 배지 아래에 네 상태를 고르는 메뉴. 고르면 after()로 화면을 다시 그림
+function openStatusMenu(anchor, n, after){
+  closeStatusMenu();
+  const w = byNo(n); if(!w) return;
+  const m = document.createElement("div"); m.className = "stmenu"; m.id = "stmenu"; m.setAttribute("role", "menu");
+  m.innerHTML = STATUSES.map((s, i) => `<button role="menuitem" data-s="${esc(s)}" class="${s === w.s ? "on" : ""}"><span class="badge ${stCls(s)}" style="margin:0">${esc(s)}</span>${esc(STATUS_DESC[s])}<small>${i + 1}</small></button>`).join("")
+    + (w.s !== w.s0 ? `<div class="sheet">시트 값: ${esc(w.s0)} (같은 값을 고르면 시트를 따라요)</div>` : "");
+  document.body.appendChild(m);
+  const r = anchor.getBoundingClientRect();
+  m.style.left = Math.max(8, Math.min(r.left + scrollX, scrollX + innerWidth - m.offsetWidth - 8)) + "px";
+  m.style.top = (r.bottom + scrollY + 6) + "px";
+  m.onclick = e => { const b = e.target.closest("[data-s]"); if(!b) return; setStatus(n, b.dataset.s); closeStatusMenu(); after(); };
+  (m.querySelector(".on") || m.querySelector("button")).focus();
+  setTimeout(() => document.addEventListener("click", stOutside), 0);
+}
+const stOutside = e => { if(!e.target.closest("#stmenu")) closeStatusMenu(); };
+function closeStatusMenu(){ const m = $("stmenu"); if(m) m.remove(); document.removeEventListener("click", stOutside); }
 function toggleStar(){
   const w = deck[idx]; if(!w) return;
   stars.has(w.n) ? stars.delete(w.n) : stars.add(w.n);
@@ -592,7 +690,7 @@ function updateCount(){ readDraft(); const n = WORDS.filter(w => inScope(w, draf
 ["fFrom","fTo","fStar","fWrong","fHist","fDays","fExam","fKind","fDay"].forEach(id => $(id).addEventListener("input", updateCount));
 $("fApply").onclick = () => {
   readDraft(); scope = draft; LS.set("scope", scope);
-  buildDeck(); $("scopePanel").hidden = true; $("scopeBtn").classList.remove("on");
+  buildDeck(); showPanel(null);
   // 아직 답을 적지 않은 테스트는 새 범위로 다시 고르게 하고, 적은 답이 있으면 그대로 둠
   const running = test && !test.done;
   if(running && !hasAnswers(test)){ test = null; saveTest(); }
@@ -603,16 +701,18 @@ $("fReset").onclick = () => {
   $("fFrom").value = draft.from; $("fTo").value = draft.to; $("fStar").checked = false; $("fWrong").checked = false; $("fHist").value = ""; $("fDays").value = ""; $("fExam").value = ""; $("fKind").value = ""; $("fDay").value = "";
   renderDraftChips(); updateCount();
 };
-$("scopeBtn").onclick = () => {
-  const p = $("scopePanel"); p.hidden = !p.hidden; $("importPanel").hidden = true;
-  $("scopeBtn").classList.toggle("on", !p.hidden); $("importBtn").classList.remove("on");
-  if(!p.hidden) openScope();
-};
-$("importBtn").onclick = () => {
-  const p = $("importPanel"); p.hidden = !p.hidden; $("scopePanel").hidden = true;
-  $("importBtn").classList.toggle("on", !p.hidden); $("scopeBtn").classList.remove("on");
-  renderDataInfo();
-};
+// 위쪽 패널은 하나만 열림. id가 없거나 이미 열린 패널이면 닫음
+const PANELS = {scopePanel:"scopeBtn", importPanel:"importBtn"};
+function showPanel(id, toggle = true){
+  const open = id && !(toggle && !$(id).hidden);
+  Object.keys(PANELS).forEach(p => { $(p).hidden = !(open && p === id); $(PANELS[p]).classList.toggle("on", open && p === id); });
+  if(open && id === "scopePanel") openScope();
+  if(open && id === "importPanel") renderDataInfo();
+  if(open) $(id).scrollIntoView({block:"nearest"});
+}
+$("scopeBtn").onclick = () => showPanel("scopePanel");
+$("importBtn").onclick = () => showPanel("importPanel");
+document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => showPanel(null));
 
 /* ---------- list ---------- */
 let listed = [];
@@ -638,7 +738,7 @@ $("lBody").onclick = e => {
   const s = e.target.closest("[data-star]");
   if(s){ const n = +s.dataset.star; stars.has(n) ? stars.delete(n) : stars.add(n); stars.save(); s.classList.toggle("on"); return; }
   const st = e.target.closest("[data-st]");
-  if(st){ const w = byNo(+st.dataset.st); setStatus(w.n, nextStatus(w.s)); st.outerHTML = badgeHTML(w, `data-st="${w.n}"`); return; }
+  if(st){ e.stopPropagation(); openStatusMenu(st, +st.dataset.st, renderList); return; }
   const tr = e.target.closest("tr.pick"); if(!tr) return;
   const q = $("lQ").value.trim(), all = $("lAll").checked, sort = $("lSort").value;
   deck = listed.slice(); shuffled = false;
@@ -821,18 +921,27 @@ function changed(){
 const syncCfg = () => LS.get("sync", {});
 let syncing = null;
 function renderSync(){
-  const c = syncCfg();
-  $("syUrl").value = c.url || ""; $("syToken").value = c.token || "";
+  const c = syncCfg(), typing = [$("syUrl"), $("syToken")].includes(document.activeElement);
+  if(!typing){ $("syUrl").value = c.url || ""; $("syToken").value = c.token || ""; }
   $("syNow").disabled = !c.url || !!syncing;
+  $("syPhone").hidden = !c.url;
+  $("syIntro").hidden = !!c.at;   // 한 번 성공하면 처음 안내는 감춤 (? 버튼은 그대로)
   $("syInfo").textContent = syncing ? "동기화하는 중…" : c.err ? `마지막 시도 실패: ${c.err}` : c.at ? `마지막 동기화 ${new Date(c.at).toLocaleString("ko-KR")}` : c.url ? "아직 동기화하지 않았어요" : "";
+  // 상단의 동기화 표시: 초록 정상 · 노랑 동기화 중 · 빨강 실패
+  const d = $("syncDot"); d.hidden = !c.url;
+  d.className = "chip sync-dot " + (syncing ? "busy" : c.err ? "err" : c.at ? "ok" : "");
+  d.textContent = c.err && !syncing ? "동기화 실패" : "동기화";
+  d.title = $("syInfo").textContent;
 }
+$("syncDot").onclick = () => showPanel("importPanel", false);
 function syncNow(manual){
   const c = syncCfg();
   if(!c.url || syncing) return syncing;
   const sent = getState();
   syncing = fetch(c.url, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},   // text/plain이라야 Apps Script가 preflight 없이 받음
       body:JSON.stringify({token:c.token, state:sent, wordsVer:LS.get("wordsVer", "")})})
-    .then(r => { if(!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    .then(r => { if(!r.ok) throw new Error(`HTTP ${r.status} (배포의 액세스 권한이 "모든 사용자"인지 확인해 주세요)`); return r.text(); })
+    .then(t => { try{ return JSON.parse(t); }catch(e){ throw new Error("응답이 JSON이 아니에요. 웹 앱 주소가 …/exec로 끝나는지, 배포 권한이 맞는지 확인해 주세요"); } })
     .then(j => {
       if(!j.ok) throw new Error(j.error || "알 수 없는 오류");
       // 보내는 사이에 바뀐 것까지 합침
@@ -846,17 +955,34 @@ function syncNow(manual){
       LS.set("sync", Object.assign(syncCfg(), {at:Date.now(), err:""}));
       if(manual || j.wrote) toast(msg);
     })
-    .catch(e => { LS.set("sync", Object.assign(syncCfg(), {err:e.message})); if(manual) toast("동기화하지 못했어요: " + e.message); })
+    .catch(e => {
+      const msg = e instanceof TypeError ? "인터넷에 연결되지 않았거나 주소에 닿지 않아요" : e.message;
+      LS.set("sync", Object.assign(syncCfg(), {err:msg})); if(manual) toast("동기화하지 못했어요: " + msg);
+    })
     .finally(() => { syncing = null; renderSync(); renderDataInfo(); });
   renderSync();
   return syncing;
 }
-$("sySave").onclick = () => {
-  const url = $("syUrl").value.trim(), token = $("syToken").value.trim();
-  if(url && !/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(url)) return toast("Apps Script 웹 앱 주소(…/exec)를 넣어 주세요");
+// 연결 링크·코드(#sync=…): 다른 기기에서 만든 동기화 설정. 비밀 값이 들어 있음
+const syncCode = c => btoa(JSON.stringify({u:c.url, t:c.token})).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+function parseSyncLink(text){
+  const m = String(text).match(/sync=([\w-]+)/); if(!m) return null;
+  try{ const j = JSON.parse(atob(m[1].replace(/-/g, "+").replace(/_/g, "/"))); return j.u ? {url:j.u, token:j.t || ""} : null; }catch(e){ return null; }
+}
+const SYNC_URL_RE = /^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/;
+function saveSync(url, token){
   LS.set("sync", url ? {url, token} : {}); renderDataInfo();
   if(url) syncNow(true); else toast("동기화를 껐어요");
+}
+$("sySave").onclick = () => {
+  const raw = $("syUrl").value.trim(), link = parseSyncLink(raw);
+  if(link) return saveSync(link.url, link.token);
+  if(raw && !SYNC_URL_RE.test(raw)) return toast("Apps Script 웹 앱 주소(https://script.google.com/macros/s/…/exec)나 연결 링크를 넣어 주세요");
+  if(raw && !$("syToken").value.trim()) return toast("비밀 값도 넣어 주세요. Apps Script에서 setup을 실행하면 나와요");
+  saveSync(raw, $("syToken").value.trim());
 };
+$("syGuideBtn").onclick = $("syGuideLink").onclick = () => openSyncGuide();
+$("syPhone").onclick = () => openPhoneLink();
 $("syNow").onclick = () => syncNow(true);
 // 앱으로 돌아오거나 켤 때 받아 오고, 떠날 때 보냄
 document.addEventListener("visibilitychange", () => { if(syncCfg().url) syncNow(false); });
@@ -909,6 +1035,7 @@ function guessMeaning(mine, key){
   return toks.some(t => t === a || (a.length >= 2 && (t.includes(a) || a.includes(t)))) ? "O" : "X";
 }
 let ttype = LS.get("ttype", "write"), tAsk = LS.get("task", "pm"), tPer = LS.get("tper", 1);
+let tLimit = LS.get("tlimit", 20), tOrder = LS.get("torder", "shuffle"), tFeedback = LS.get("tfb", true);   // 문항 수(0 = 전체)·순서·고르면 바로 정답 보기
 function saveTest(){ LS.set("test", test); }
 /* 출제 방향. dim: 기록에 남는 쪽(p 발음 / m 뜻), q·o: 고르기 문제의 질문·보기로 쓰는 필드, can: 출제할 수 있는 단어 */
 const TYPES = {
@@ -993,16 +1120,21 @@ function renderTest(){
           <div class="field" ${type === "write" ? "" : "hidden"}><label for="tAsk">묻는 것</label><select id="tAsk">${Object.keys(ASK_LABEL).map(k => `<option value="${k}" ${k === tAsk ? "selected" : ""}>${ASK_LABEL[k]}</option>`).join("")}</select></div>
           <div class="field"><label for="tPer">한 화면에</label><select id="tPer"><option value="1">1개씩</option><option value="5" ${tPer === 5 ? "selected" : ""}>5개씩 (Tab으로 이동)</option></select></div>
         </div>
+        <label class="check" ${T.o ? "" : "hidden"}><input type="checkbox" id="tFb" ${tFeedback ? "checked" : ""}> 고르면 바로 정답 보기</label>
         <div class="row" style="gap:18px;align-items:flex-end">
-          <div class="field"><span class="lbl">현재 범위</span><b>${esc(scopeLabel())} · ${n}단어</b></div>
-          <div class="field"><label for="tOrder">순서</label><select id="tOrder"><option value="shuffle">섞어서</option><option value="seq">번호순</option></select></div>
-          <div class="field"><label for="tLimit">문항 수</label><select id="tLimit"><option value="0">전체 (${n})</option>${[20,30,50,100].filter(x => x < n).map(x => `<option value="${x}">${x}개</option>`).join("")}</select></div>
+          <div class="field"><span class="lbl">현재 범위 · <button class="linkbtn" id="tScope">바꾸기</button></span><b>${esc(scopeLabel())} · ${n}단어</b></div>
+          <div class="field"><label for="tOrder">순서</label><select id="tOrder"><option value="shuffle">섞어서</option><option value="seq" ${tOrder === "seq" ? "selected" : ""}>번호순</option></select></div>
+          <div class="field"><label for="tLimit">문항 수</label><select id="tLimit">${[10,20,30,50,100].filter(x => x < n).map(x => `<option value="${x}" ${x === tLimit ? "selected" : ""}>${x}개</option>`).join("")}<option value="0" ${!tLimit || tLimit >= n ? "selected" : ""}>전체 (${n})</option></select></div>
         </div>
-        <div class="row"><button class="btn primary" id="tStart" ${n ? "" : "disabled"}>시작</button><span class="hint">범위는 위의 <b>범위 설정</b>에서 바꿀 수 있어요.</span></div>
+        <div class="row"><button class="btn primary" id="tStart" ${n ? "" : "disabled"}>시작</button>${n ? "" : `<span class="hint">이 범위에 출제할 단어가 없어요. 범위를 바꿔 주세요.</span>`}</div>
       </div>`;
     $("tType").onchange = () => { ttype = $("tType").value; LS.set("ttype", ttype); renderTest(); };
     $("tAsk").onchange = () => { tAsk = $("tAsk").value; LS.set("task", tAsk); };
     $("tPer").onchange = () => { tPer = +$("tPer").value; LS.set("tper", tPer); };
+    $("tOrder").onchange = () => { tOrder = $("tOrder").value; LS.set("torder", tOrder); };
+    $("tLimit").onchange = () => { tLimit = +$("tLimit").value; LS.set("tlimit", tLimit); };
+    $("tFb").onchange = () => { tFeedback = $("tFb").checked; LS.set("tfb", tFeedback); };
+    $("tScope").onclick = () => showPanel("scopePanel", false);
     $("tStart").onclick = () => startTest(type, $("tOrder").value, +$("tLimit").value);
     return;
   }
@@ -1073,9 +1205,16 @@ function renderTest(){
   if($("tPerBtn")) $("tPerBtn").onclick = () => { test.per = per === 1 ? 5 : 1; tPer = test.per; LS.set("tper", tPer); saveTest(); renderTest(); };
   fitWord();
 }
+// 보기를 고르면 저장하고 다음 문제로. "바로 정답 보기"면 맞은 보기·고른 보기를 잠깐 색으로 보여 준 뒤 넘김
 function pick(c){
-  test.ans[test.items[test.i]] = {c}; saveTest();
-  test.i < test.items.length - 1 ? tGo(1) : renderTest();
+  if(pick.busy) return;
+  const n = test.items[test.i];
+  test.ans[n] = {c}; saveTest();
+  const next = () => { pick.busy = false; if(test && !test.done && test.items[test.i] === n) test.i < test.items.length - 1 ? tGo(1) : renderTest(); };
+  if(!tFeedback) return next();
+  pick.busy = true;
+  document.querySelectorAll("#test .opt").forEach(b => { const x = +b.dataset.c; b.classList.toggle("right", x === n); b.classList.toggle("miss", x === c && c !== n); b.classList.remove("on"); });
+  setTimeout(next, c === n ? 600 : 1400);
 }
 function tGo(d){
   const N = test.items.length, per = perOf(test), start = Math.floor(test.i / per) * per;
@@ -1087,7 +1226,7 @@ function finishTest(early){
     const per = perOf(test), start = Math.floor(test.i / per) * per; let end = start;
     test.items.slice(start, start + per).forEach((n, j) => { const a = test.ans[n]; if(a && (a.p || a.m || a.c)) end = start + j + 1; });
     test.items = test.items.slice(0, end);
-    if(!test.items.length){ test = null; saveTest(); renderTest(); return; }
+    if(!test.items.length){ test = null; saveTest(); renderTest(); toast("적은 답이 없어서 테스트를 닫았어요"); return; }
   }
   test.done = true;
   const type = typeOf(test), T = TYPES[type], ask = askOf(test);
@@ -1096,6 +1235,8 @@ function finishTest(early){
     if(type === "write") test.grade[n] = { p: ask.includes("p") ? guessReading(a.p, w.p) : "-", m: ask.includes("m") ? guessMeaning(a.m, w.m) : "-" };
     else { test.grade[n] = {p:"-", m:"-"}; test.grade[n][T.dim] = type === "recall" ? guessWord(a.p, w) : a.c === n ? "O" : "X"; }
   });
+  test.prevWrong = test.items.filter(n => wrong.has(n));   // 오답 모음 반영을 되돌릴 때 쓰려고
+  test.wrongOn = true; applyWrong();
   recordTest(); saveTest(); renderTest();
 }
 function renderReview(){
@@ -1135,21 +1276,21 @@ function renderReview(){
       <div class="score">${stats}
       </div>
       <div class="hint">${hint}</div>
+      <div class="row" style="justify-content:space-between"><span class="hint">${!test.wrongOn ? "오답 모음에 반영하지 않았어요." : `틀린 단어는 오답 모음에 넣고 맞힌 단어는 뺐어요 (오답 모음 ${wrong.size}개).`}</span>
+        <button class="btn" id="rWrong">${!test.wrongOn ? "오답 모음에 반영" : "오답 모음 반영 취소"}</button></div>
       <div class="row">
         ${T.o ? "" : '<button class="btn primary" id="rExport">채점용 CSV 내보내기</button>'}
-        <button class="btn" id="rWrong">오답 모음 업데이트</button>
         <button class="btn" id="rRetry">틀린 것만 다시</button>
         <button class="btn" id="rNew">새 테스트</button>
       </div>
     </div>
     <div class="tbl"><table>${table}</table></div>`;
-  box.querySelectorAll(".ox button").forEach(b => b.onclick = () => { test.grade[+b.dataset.n][b.dataset.k] = b.dataset.v; recordTest(); saveTest(); renderReview(); });
+  box.querySelectorAll(".ox button").forEach(b => b.onclick = () => { test.grade[+b.dataset.n][b.dataset.k] = b.dataset.v; applyWrong(); recordTest(); saveTest(); renderReview(); });
   box.querySelectorAll("[data-say]").forEach(el => el.onclick = e => { const w = byNo(+el.dataset.say); if(w) speak(w.k || w.w, e.shiftKey); });
   if($("rExport")) $("rExport").onclick = exportCSV;
   $("rWrong").onclick = () => {
-    let add = 0, rem = 0;
-    test.items.forEach(n => { if(gOk(test.grade[n])){ if(wrong.delete(n)) rem++; } else { if(!wrong.has(n)) add++; wrong.add(n); } });
-    wrong.save(); toast(`오답 모음: ${add}개 추가, ${rem}개 제외 (총 ${wrong.size}개)`);
+    if(!test.prevWrong) test.prevWrong = test.items.filter(n => wrong.has(n));   // 예전에 끝낸 테스트
+    test.wrongOn = !test.wrongOn; applyWrong(true); saveTest(); renderReview();
   };
   $("rRetry").onclick = () => {
     const items = test.items.filter(n => !gOk(test.grade[n]));
@@ -1157,6 +1298,17 @@ function renderReview(){
     newTest(type, shuffle(items), "직전 테스트의 틀린 단어 · " + typeLabel(type, test.ask), test.ask, test.per, test.scope);
   };
   $("rNew").onclick = () => { test = null; saveTest(); renderTest(); };
+}
+// 끝난 테스트의 결과를 오답 모음에 반영(틀리면 넣고 맞으면 뺌). 반영을 끄면 테스트 전 상태로 되돌림.
+// O/X를 고칠 때는 반영 중일 때만 다시 반영함
+function applyWrong(toggled){
+  if(!test || !test.done || !(test.wrongOn || toggled) || !test.prevWrong) return;
+  const prev = new Set(test.prevWrong);
+  test.items.forEach(n => {
+    const on = !test.wrongOn ? prev.has(n) : !gOk(test.grade[n]);
+    on ? wrong.add(n) : wrong.delete(n);
+  });
+  wrong.save();
 }
 function csvCell(v){ v = String(v ?? ""); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
 // 적은 답 그대로 내보냄. 정답과 테스트ID를 같이 넣어, AI가 채점 열만 고쳐 돌려주면 다시 불러올 수 있음
@@ -1213,6 +1365,140 @@ function renderLog(){
   $("logExport").onclick = () => saveFile(`n3_daily_log_${dateKey()}.csv`, daysCSV());
 }
 
+/* ---------- 도움말 · 처음 안내 · 동기화 가이드 ---------- */
+const SYNC_GS = __SYNC_GS__;   // 빌드할 때 dist/sync.gs 내용을 넣음 (설정 방법 창의 "코드 복사")
+const kbdRow = (keys, what) => `<tr><td>${keys.map(k => `<kbd>${k}</kbd>`).join(" ")}</td><td>${what}</td></tr>`;
+function openHelp(){
+  openModal(`
+    <h2>도움말</h2>
+    <h4>이렇게 써요</h4>
+    <ol>
+      <li><b>학습</b>: 카드를 넘기며 외워요. 뜻 가리기로 스스로 확인하고, 🔊로 발음을 들어요.</li>
+      <li><b>범위 설정</b>: 번호·주제·학습상태·기출·★·오답 모음·테스트 기록으로 볼 단어를 골라요. 학습·목록·테스트가 모두 이 범위를 써요.</li>
+      <li><b>테스트</b>: 쓰기 2가지와 고르기 4가지. 끝나면 틀린 단어가 오답 모음에 자동으로 들어가요.</li>
+      <li><b>기록</b>: 날짜별로 본 단어 수와 테스트 결과가 쌓여요.</li>
+    </ol>
+    <h4>학습상태</h4>
+    <table><tbody>${STATUSES.map((s, i) => `<tr><td><span class="badge ${stCls(s)}" style="margin:0">${esc(s)}</span></td><td>${esc(STATUS_DESC[s])}</td><td class="corr">학습 카드에서 <kbd>${i + 1}</kbd></td></tr>`).join("")}</tbody></table>
+    <p class="hint">카드나 목록의 상태 배지를 눌러도 바꿀 수 있어요. 시트와 다르게 바꾼 단어에는 ✎ 표시가 붙고, 동기화하면 시트에 적혀요.</p>
+    <h4>단축키 · 학습</h4>
+    <table><tbody>
+      ${kbdRow(["←", "→"], "이전 / 다음 (폰은 카드를 옆으로 밀기)")}${kbdRow(["Space"], "뜻 가리기 / 보기 (폰은 카드 누르기)")}
+      ${kbdRow(["P"], "단어 듣기 · <kbd>Shift</kbd>+<kbd>P</kbd> 천천히")}${kbdRow(["E"], "예문 듣기 · <kbd>Shift</kbd>+<kbd>E</kbd> 천천히")}
+      ${kbdRow(["1", "2", "3", "4"], "학습상태 Pass · Good · Fail · Not Yet")}${kbdRow(["F"], "★ 표시")}${kbdRow(["S"], "섞기 / 번호순")}
+      ${kbdRow(["Home", "End"], "처음 / 끝")}
+    </tbody></table>
+    <h4>단축키 · 테스트와 공통</h4>
+    <table><tbody>
+      ${kbdRow(["1", "2", "3", "4"], "고르기 문제에서 보기 고르기")}${kbdRow(["Enter"], "다음 (쓰기에서 <kbd>Shift</kbd>+<kbd>Enter</kbd> 이전)")}
+      ${kbdRow(["Tab"], "5개씩 쓰기에서 다음 칸, 마지막 칸이면 다음 화면")}
+      ${kbdRow(["/"], "목록에서 찾기")}${kbdRow(["+", "−"], "글자 크기")}${kbdRow(["Esc"], "창·패널 닫기")}${kbdRow(["?"], "이 도움말")}
+    </tbody></table>
+    <h4>기록은 어디에 저장되나요</h4>
+    <p>이 기기 안(브라우저 저장소)에 저장돼요. 맥과 폰을 같이 쓰려면 <b>구글 시트 동기화</b>를 켜 주세요. 동기화하지 않아도 <b>설정·데이터 → 백업 내보내기</b>로 파일을 남길 수 있어요.</p>
+    <div class="row">
+      <button class="btn primary" id="hSync">동기화 설정 방법</button>
+      <button class="btn" id="hWelcome">처음 안내 다시 보기</button>
+    </div>`, m => {
+      m.querySelector("#hSync").onclick = openSyncGuide;
+      m.querySelector("#hWelcome").onclick = () => { closeModal(); LS.set("welcomed", 0); renderWelcome(); setMode("study"); scrollTo(0, 0); };
+    });
+}
+function openSyncGuide(){
+  openModal(`
+    <h2>구글 시트 동기화 설정</h2>
+    <p>단어장 구글 시트에 작은 프로그램(Apps Script)을 붙이면, 그 시트가 맥과 폰 사이의 기록 보관함이 돼요. 서버나 결제는 필요 없고 기록은 내 구글 계정 안에만 있어요. <b>컴퓨터에서 한 번만</b> 하면 돼요 (10분 정도).</p>
+    <ol>
+      <li><b>Apps Script 열기</b><br>단어장 구글 시트를 열고 메뉴 <b>확장 프로그램 → Apps Script</b>를 눌러요.</li>
+      <li><b>코드 붙여 넣기</b><br><button class="btn primary" id="gCopy">코드 복사</button><textarea class="code" id="gCode" rows="6" readonly hidden></textarea><br>편집기의 <code>Code.gs</code> 내용을 모두 지우고 붙여 넣은 뒤 저장(<kbd>⌘</kbd>+<kbd>S</kbd>)해요. 단어장 탭 이름이 <code>N3단어장</code>이 아니면 맨 위 <code>WORDS_SHEET</code> 줄의 이름을 바꿔 주세요.</li>
+      <li><b>비밀 값 만들기</b><br>위쪽 함수 고르는 칸에서 <code>setup</code>을 고르고 <b>실행</b>을 눌러요. 처음에는 권한을 물어요: <b>권한 검토 → 내 계정 선택</b> → "Google에서 확인하지 않은 앱" 화면이 나오면 <b>고급 → 프로젝트로 이동(안전하지 않음)</b> → <b>허용</b>. 내가 만든 스크립트라 괜찮아요.<br>아래 <b>실행 로그</b>에 나오는 <b>앱에 넣을 비밀 값</b>을 복사해 두세요. 다른 사람이 내 기록에 접근하지 못하게 하는 비밀번호예요.</li>
+      <li><b>웹 앱으로 배포</b><br>오른쪽 위 <b>배포 → 새 배포</b> → 유형 선택(톱니바퀴)에서 <b>웹 앱</b> → 실행 사용자 <b>나</b>, 액세스 권한 <b>모든 사용자</b> → <b>배포</b>. 나오는 <b>웹 앱 URL</b>(…/exec로 끝나요)을 복사해요. "모든 사용자"여도 비밀 값을 모르면 아무것도 할 수 없어요.</li>
+      <li><b>앱에 넣기</b><br>이 창을 닫고 <b>설정·데이터</b>의 웹 앱 주소와 비밀 값 칸에 붙여 넣은 뒤 <b>저장</b>. "동기화했어요"가 뜨면 끝이에요.</li>
+      <li><b>폰 연결</b><br>저장한 뒤 나오는 <b>📱 다른 기기 연결</b>을 누르면 폰에 설정을 옮기는 QR과 링크가 나와요.</li>
+    </ol>
+    <h4>그다음은 알아서</h4>
+    <p>앱을 켤 때, 앱으로 돌아오거나 떠날 때, 기록이 바뀌고 15초 뒤에 주고받아요. 위쪽 <span class="chip sync-dot ok" style="cursor:default">동기화</span> 표시가 초록이면 정상, 노랑은 주고받는 중, 빨강은 실패예요(누르면 이유가 보여요). 바꾼 학습상태는 시트의 학습상태 열에 적히고, 시트에서 단어장을 고치면 앱이 알아서 받아 와요.</p>
+    <h4>잘 안 될 때</h4>
+    <table><tbody>
+      <tr><td>비밀 값이 맞지 않아요</td><td>실행 로그의 비밀 값을 앞뒤 공백 없이 다시 붙여 넣어요.</td></tr>
+      <tr><td>setup을 먼저 실행해 주세요</td><td>3단계를 해 주세요.</td></tr>
+      <tr><td>HTTP 401·403, 응답이 JSON이 아니에요</td><td>배포의 액세스 권한이 <b>모든 사용자</b>인지, 주소가 <code>/exec</code>로 끝나는지 확인해요 (<code>/dev</code> 주소는 안 돼요).</td></tr>
+      <tr><td>코드를 바꿨는데 그대로예요</td><td><b>배포 → 배포 관리 → 연필 → 버전: 새 버전 → 배포</b>. 주소는 그대로예요.</td></tr>
+      <tr><td>비밀 값을 바꾸고 싶어요</td><td>Apps Script의 <b>프로젝트 설정 → 스크립트 속성</b>에서 <code>TOKEN</code>을 지우고 setup을 다시 실행한 뒤, 각 기기에 새 값을 넣어요.</td></tr>
+    </tbody></table>`, m => {
+      const show = () => { const ta = m.querySelector("#gCode"); ta.value = SYNC_GS; ta.hidden = false; ta.focus(); ta.select(); };
+      m.querySelector("#gCopy").onclick = () => SYNC_GS ? copyText(SYNC_GS, "코드를 복사했어요. Code.gs에 붙여 넣어 주세요", show) : toast("이 빌드에는 코드가 없어요. dist/sync.gs를 열어 복사해 주세요");
+    });
+}
+// 다른 기기 연결: 이 기기의 동기화 설정을 링크·QR로. QR은 맥 앱이 만들어 줌(qrReady로 돌아옴)
+function openPhoneLink(){
+  const c = syncCfg(); if(!c.url) return toast("먼저 이 기기에서 동기화를 설정해 주세요");
+  const web0 = LS.get("webUrl", "") || (location.protocol === "https:" ? location.origin + location.pathname : "");
+  openModal(`
+    <h2>다른 기기 연결</h2>
+    <p>폰(또는 다른 컴퓨터)의 N3 단어 앱에 이 기기의 동기화 설정을 그대로 넣어요.</p>
+    <div class="field"><label for="plWeb">폰 앱 주소 (<code>dist/web</code>을 올린 주소, 예: https://n3-words.pages.dev)</label>
+      <input class="search" id="plWeb" type="url" autocomplete="off" value="${esc(web0)}" placeholder="https://…"></div>
+    <img class="qr" id="plQr" alt="연결 QR 코드" hidden>
+    <p class="hint" id="plQrNote"></p>
+    <div class="field"><label for="plLink">연결 링크</label><textarea class="code" id="plLink" rows="3" readonly></textarea></div>
+    <div class="row"><button class="btn primary" id="plCopy">링크 복사</button></div>
+    <h4>폰에서</h4>
+    <ol>
+      <li>카메라로 QR을 찍거나 링크를 열면, 그 페이지에 설정이 자동으로 들어가요.</li>
+      <li><b>iPhone</b>은 홈 화면에 추가한 앱이 Safari와 저장 공간을 따로 써요. 홈 화면 앱을 열고 <b>설정·데이터</b>의 웹 앱 주소 칸에 이 링크를 붙여 넣고 <b>저장</b>해 주세요.</li>
+    </ol>
+    <p class="hint">링크와 QR에는 비밀 값이 들어 있어요. 나에게 보내기·AirDrop처럼 나만 보는 곳으로만 옮겨 주세요.</p>`, m => {
+      const upd = () => {
+        const web = m.querySelector("#plWeb").value.trim().replace(/#.*$/, ""); LS.set("webUrl", web);
+        const link = (web || "") + "#sync=" + syncCode(c);
+        m.querySelector("#plLink").value = link;
+        const qr = m.querySelector("#plQr"), note = m.querySelector("#plQrNote");
+        qr.hidden = true;
+        if(!/^https:\/\//.test(web)) note.textContent = "폰 앱 주소를 넣으면 카메라로 찍을 QR이 생겨요. 주소 없이도 링크를 복사해 폰 앱에 붙여 넣을 수 있어요.";
+        else if(native("n3qr")){ note.textContent = "폰 카메라로 찍어 주세요."; native("n3qr").postMessage({text:link}); }
+        else note.textContent = "QR은 맥 앱에서 보여요. 여기서는 링크를 복사해 폰으로 보내 주세요.";
+      };
+      m.querySelector("#plWeb").oninput = upd;
+      m.querySelector("#plCopy").onclick = () => copyText(m.querySelector("#plLink").value, "연결 링크를 복사했어요", () => m.querySelector("#plLink").select());
+      upd();
+    });
+}
+function qrReady(src){ const q = $("plQr"); if(q){ q.src = src; q.hidden = false; } }
+// 처음 켰을 때 한 번 보여 주는 안내
+function renderWelcome(){
+  const box = $("welcome");
+  box.hidden = !!LS.get("welcomed", 0); if(box.hidden) return;
+  box.innerHTML = `
+    <div class="phead"><h3>N3 단어에 오신 걸 환영해요</h3><button class="x" id="wX" aria-label="닫기">✕</button></div>
+    <ol style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:14px;line-height:1.6">
+      <li><b>학습</b>: 카드를 <kbd>←</kbd> <kbd>→</kbd>(폰은 옆으로 밀기)로 넘기고, <kbd>Space</kbd>(폰은 카드 누르기)로 뜻을 가렸다 보며 외워요. 🔊를 누르면 발음이 나와요.</li>
+      <li><b>범위 설정</b>: 지금은 <b>${esc(scopeLabel())}</b>을 봐요. 주제·학습상태·기출 등으로 바꿀 수 있어요.</li>
+      <li><b>학습상태</b>: 카드의 상태 배지를 눌러 ${STATUSES.map(s => `${esc(s)}(${esc(STATUS_DESC[s])})`).join(" · ")}로 표시해요.</li>
+      <li><b>테스트</b>: 쓰기·고르기 6가지. 틀린 단어는 오답 모음에 모여서 다시 볼 수 있어요.</li>
+    </ol>
+    <div class="row">
+      <button class="btn primary" id="wStart">시작하기</button>
+      <button class="btn" id="wSync">맥·폰 같이 쓰기 설정</button>
+      <button class="btn" id="wHelp">도움말·단축키</button>
+    </div>`;
+  const done = () => { LS.set("welcomed", 1); box.hidden = true; };
+  $("wX").onclick = $("wStart").onclick = done;
+  $("wSync").onclick = () => { done(); showPanel("importPanel", false); openSyncGuide(); };
+  $("wHelp").onclick = () => { done(); openHelp(); };
+}
+$("helpBtn").onclick = openHelp;
+// iPhone Safari에서 아직 홈 화면 앱으로 설치하지 않았을 때 한 번 안내
+if(/iP(hone|ad|od)/.test(navigator.userAgent) && location.protocol === "https:" && !navigator.standalone && !LS.get("iosHint", 0)) $("iosHint").hidden = false;
+$("iosHintX").onclick = () => { LS.set("iosHint", 1); $("iosHint").hidden = true; };
+// 연결 링크로 열었으면 설정을 넣고 주소에서 지움 (#뒤는 서버로 가지 않음)
+(() => {
+  const link = parseSyncLink(location.hash); if(!link) return;
+  history.replaceState(null, "", location.pathname + location.search);
+  setTimeout(() => { toast("연결 링크로 동기화를 설정했어요"); saveSync(link.url, link.token); }, 300);
+})();
+$("gradeAsk").onclick = () => copyText("~/Library/Application Support/N3Words/grading/의 outbox에서 가장 최근 파일을 채점해서 inbox에 넣어줘. 자가채점 열만 O/X로 고치고, 테스트ID를 포함한 나머지 열과 CSV 형식은 그대로 둬.", "Claude에게 보낼 문장을 복사했어요");
+
 /* ---------- mode / keys ---------- */
 const MODES = {study:["tabStudy", () => renderStudy()], list:["tabList", () => renderList()], test:["tabTest", () => renderTest()], log:["tabLog", () => renderLog()]};
 function render(){
@@ -1235,10 +1521,16 @@ $("shuffleBtn").onclick = () => {
 };
 $("card").onclick = () => { if(quiz){ quiz = false; renderStudy(); } };
 document.addEventListener("keydown", e => {
+  if(e.key === "Escape"){   // 위에 떠 있는 것부터 닫음: 창 → 학습상태 메뉴 → 패널
+    if($("modal")) closeModal(); else if($("stmenu")) closeStatusMenu(); else if(!$("scopePanel").hidden || !$("importPanel").hidden) showPanel(null);
+    return;
+  }
   if(e.metaKey || e.ctrlKey || e.altKey) return;
   const tag = (e.target.tagName || "").toLowerCase();
-  if(tag === "input" || tag === "select" || tag === "textarea") return;
+  if(tag === "input" || tag === "select" || tag === "textarea" || $("modal")) return;
+  if($("stmenu") && /^[1-4]$/.test(e.key)){ e.preventDefault(); $("stmenu").querySelectorAll("[data-s]")[e.key - 1].click(); return; }
   switch(e.key){
+    case "?": openHelp(); return;
     case "+": case "=": stepScale(1); return;
     case "-": case "_": stepScale(-1); return;
     case "/": e.preventDefault(); setMode("list"); $("lQ").focus(); $("lQ").select(); return;
@@ -1273,6 +1565,8 @@ if(!MODES[mode]) mode = "study";
 buildDeck(LS.get("pos", null));
 applyScale();
 render();
+renderWelcome();
+renderSync();
 if(native("n3grade")) native("n3grade").postMessage({op:"scan"});   // 켤 때 inbox 확인 (창으로 돌아올 때는 앱이 알아서 확인)
 if(syncCfg().url) syncNow(false);
 // 웹으로 올린 경우에만 오프라인용 service worker (맥 앱·파일로 열 때는 건너뜀)

@@ -37,7 +37,10 @@ def main():
     words = load_words()
     data = json.dumps(words, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     state_js = (ROOT / "src" / "state.js").read_text(encoding="utf-8")
-    html = (ROOT / "src" / "index.template.html").read_text(encoding="utf-8").replace("/*__STATE_JS__*/", state_js) \
+    sync_gs = state_js + "\n" + (ROOT / "scripts" / "sync.gs").read_text(encoding="utf-8")
+    # 앱의 동기화 설정 창에서 "코드 복사"로 바로 붙여 넣을 수 있게 sync.gs 전체를 문자열로 넣음
+    sync_js = json.dumps(sync_gs, ensure_ascii=False).replace("</", "<\\/")
+    html = (ROOT / "src" / "index.template.html").read_text(encoding="utf-8").replace("/*__STATE_JS__*/", state_js).replace("__SYNC_GS__", sync_js) \
         .replace("__VER__", hashlib.sha1(data.encode()).hexdigest()[:10]).replace("__DATA__", data)
 
     shutil.rmtree(DIST, ignore_errors=True)
@@ -54,7 +57,7 @@ def main():
     subprocess.run(["zip", "-qry", "N3_단어_app.zip", APP.name], cwd=DIST, check=True)
     build_web(html)
     # 구글 시트에 붙일 Apps Script: 합치는 규칙(state.js)을 앱과 똑같이 씀
-    (DIST / "sync.gs").write_text(state_js + "\n" + (ROOT / "scripts" / "sync.gs").read_text(encoding="utf-8"), encoding="utf-8")
+    (DIST / "sync.gs").write_text(sync_gs, encoding="utf-8")
     print(f"단어 {len(words)}개 → {DIST.relative_to(ROOT)}/ (index.html, {APP.name}, N3_단어_app.zip, web/, sync.gs)")
 
 MANIFEST = {

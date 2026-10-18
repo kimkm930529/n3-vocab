@@ -64,7 +64,7 @@ test("앱 스크립트가 문법 오류 없이 만들어짐", () => {
   const root = path.join(__dirname, "..");
   const html = fs.readFileSync(path.join(root, "src/index.template.html"), "utf8")
     .replace("/*__STATE_JS__*/", fs.readFileSync(path.join(root, "src/state.js"), "utf8"))
-    .replace("__DATA__", "[]").replace("__VER__", "test");
+    .replace("__DATA__", "[]").replace("__VER__", "test").replace("__SYNC_GS__", '""');
   const code = html.match(/<script>([\s\S]*)<\/script>/)[1];
   assert.doesNotThrow(() => new vm.Script(code));
   const gs = fs.readFileSync(path.join(root, "src/state.js"), "utf8") + fs.readFileSync(path.join(root, "scripts/sync.gs"), "utf8");

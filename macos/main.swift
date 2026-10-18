@@ -1,6 +1,7 @@
 // N3 단어 — index.html을 WKWebView 창 하나로 띄우는 맥 앱 껍데기
 import Cocoa
 import WebKit
+import CoreImage
 
 // 고정된 주소(n3words://app/)로 띄워야 localStorage(★·오답·기록)가 앱을 새로 깔아도 유지됨
 let scheme = "n3words"
@@ -21,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKURLSchemeHandler, WK
         cfg.userContentController.add(self, name: "n3log")
         cfg.userContentController.add(self, name: "n3grade")
         cfg.userContentController.add(self, name: "n3backup")
+        cfg.userContentController.add(self, name: "n3qr")
         if let js = migrationScript() {
             cfg.userContentController.addUserScript(WKUserScript(source: js, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         }
@@ -97,6 +99,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKURLSchemeHandler, WK
         old.forEach { try? fm.removeItem(at: dir.appendingPathComponent($0)) }
     }
 
+    // 다른 기기 연결용 QR: CoreImage로 만들어 페이지의 qrReady(dataURL)로 돌려줌
+    func makeQR(_ text: String) {
+        guard let f = CIFilter(name: "CIQRCodeGenerator") else { return }
+        f.setValue(Data(text.utf8), forKey: "inputMessage")
+        f.setValue("M", forKey: "inputCorrectionLevel")
+        guard let img = f.outputImage?.transformed(by: CGAffineTransform(scaleX: 8, y: 8)) else { return }
+        let rep = NSBitmapImageRep(ciImage: img)
+        guard let png = rep.representation(using: .png, properties: [:]) else { return }
+        web.evaluateJavaScript("qrReady('data:image/png;base64,\(png.base64EncodedString())')")
+    }
+
+    // MARK: 도움말 메뉴 → 페이지의 도움말 창
+    @objc func showHelp(_ sender: Any?) { web.evaluateJavaScript("openHelp()") }
+    @objc func showSyncGuide(_ sender: Any?) { web.evaluateJavaScript("openSyncGuide()") }
+
     // 예전 Chrome 창 버전의 데이터를 옮김 (scripts/migrate_from_chrome.py가 만든 N3Words/migrate.json).
     // 파일의 수정 시각을 표시로 남겨 같은 파일은 한 번만 적용함
     func migrationScript() -> String? {
@@ -135,6 +152,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKURLSchemeHandler, WK
             return
         }
         if message.name == "n3backup" { saveBackup(text, day: body["name"] as? String ?? ""); return }
+        if message.name == "n3qr" { makeQR(text); return }
         guard let name = body["name"] as? String else { return }
         let panel = NSSavePanel()
         panel.nameFieldStringValue = name
@@ -165,6 +183,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKURLSchemeHandler, WK
                     item("붙여넣기", #selector(NSText.paste(_:)), "v"), item("전체 선택", #selector(NSText.selectAll(_:)), "a")])
         add("보기", [reload, item("전체 화면", #selector(NSWindow.toggleFullScreen(_:)), "f", [.command, .control])])
         add("윈도우", [item("최소화", #selector(NSWindow.performMiniaturize(_:)), "m"), item("닫기", #selector(NSWindow.performClose(_:)), "w")])
+        let help = item("N3 단어 도움말", #selector(showHelp(_:)), "?"); help.target = self
+        let guide = item("구글 시트 동기화 설정 방법", #selector(showSyncGuide(_:)), ""); guide.target = self
+        add("도움말", [help, guide])
         return main
     }
 }
