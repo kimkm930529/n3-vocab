@@ -5,16 +5,21 @@ import WebKit
 // 고정된 주소(n3words://app/)로 띄워야 localStorage(★·오답·기록)가 앱을 새로 깔아도 유지됨
 let scheme = "n3words"
 let dataDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("N3Words")
+// AI 채점 폴더: 앱이 outbox에 채점용 CSV를 쓰고, inbox에 들어온 채점 CSV를 읽어 반영한 뒤 done으로 옮김
+let gradeDir = dataDir.appendingPathComponent("grading")
 
 final class AppDelegate: NSObject, NSApplicationDelegate, WKURLSchemeHandler, WKUIDelegate, WKScriptMessageHandler {
     var window: NSWindow!
     var web: WKWebView!
+    var inboxSeen = [String: Date]()   // 이미 페이지에 넘긴 inbox 파일(이름: 수정 시각). 못 읽은 파일을 매번 다시 알리지 않으려고
+    var pageReady = false
 
     func applicationDidFinishLaunching(_ note: Notification) {
         let cfg = WKWebViewConfiguration()
         cfg.setURLSchemeHandler(self, forURLScheme: scheme)
         cfg.userContentController.add(self, name: "n3save")
         cfg.userContentController.add(self, name: "n3log")
+        cfg.userContentController.add(self, name: "n3grade")
         if let js = migrationScript() {
             cfg.userContentController.addUserScript(WKUserScript(source: js, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         }
@@ -36,6 +41,50 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKURLSchemeHandler, WK
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+    func applicationDidBecomeActive(_ note: Notification) { if pageReady { scanInbox() } }
+
+    // MARK: AI 채점 폴더
+    func gradeSub(_ name: String) -> URL {
+        let dir = gradeDir.appendingPathComponent(name)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }
+    // inbox의 CSV를 페이지의 gradeInbox()에 넘김. 반영에 성공한 파일은 페이지가 done이라고 알려 오면 옮김
+    func scanInbox() {
+        let fm = FileManager.default
+        let files = ((try? fm.contentsOfDirectory(at: gradeSub("inbox"), includingPropertiesForKeys: [.contentModificationDateKey])) ?? [])
+            .filter { $0.pathExtension.lowercased() == "csv" }.sorted { $0.lastPathComponent < $1.lastPathComponent }
+        var list = [[String: String]]()
+        for f in files {
+            let name = f.lastPathComponent
+            guard let date = (try? f.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate, inboxSeen[name] != date else { continue }
+            inboxSeen[name] = date
+            // 글자로 읽을 수 없는 파일도 빈 내용으로 넘겨, 페이지가 이름을 알려 주게 함
+            list.append(["name": name, "text": (try? String(contentsOf: f, encoding: .utf8)) ?? ""])
+        }
+        guard !list.isEmpty, let data = try? JSONSerialization.data(withJSONObject: list), let json = String(data: data, encoding: .utf8) else { return }
+        web.evaluateJavaScript("gradeInbox(\(json))")
+    }
+    func handleGrade(_ body: [String: Any]) {
+        let fm = FileManager.default
+        let name = ((body["name"] as? String ?? "") as NSString).lastPathComponent
+        switch body["op"] as? String {
+        case "out":
+            if let text = body["text"] as? String, !name.isEmpty { try? text.write(to: gradeSub("outbox").appendingPathComponent(name), atomically: true, encoding: .utf8) }
+        case "scan":   // 페이지가 (다시) 떴을 때
+            pageReady = true; inboxSeen = [:]; _ = gradeSub("outbox"); _ = gradeSub("done"); scanInbox()
+        case "done":
+            guard !name.isEmpty else { return }
+            let to = gradeSub("done").appendingPathComponent(name)
+            try? fm.removeItem(at: to)
+            try? fm.moveItem(at: gradeSub("inbox").appendingPathComponent(name), to: to)
+            inboxSeen[name] = nil
+        case "open":
+            _ = gradeSub("outbox"); _ = gradeSub("inbox"); _ = gradeSub("done")
+            NSWorkspace.shared.open(gradeDir)
+        default: break
+        }
+    }
 
     // 예전 Chrome 창 버전의 데이터를 옮김 (scripts/migrate_from_chrome.py가 만든 N3Words/migrate.json).
     // 파일의 수정 시각을 표시로 남겨 같은 파일은 한 번만 적용함
@@ -66,7 +115,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKURLSchemeHandler, WK
         panel.beginSheetModal(for: window) { r in completionHandler(r == .OK ? panel.urls : nil) }
     }
     func userContentController(_ c: WKUserContentController, didReceive message: WKScriptMessage) {
-        guard let body = message.body as? [String: Any], let text = body["text"] as? String else { return }
+        guard let body = message.body as? [String: Any] else { return }
+        if message.name == "n3grade" { handleGrade(body); return }
+        guard let text = body["text"] as? String else { return }
         if message.name == "n3log" {   // 일별 학습 기록은 묻지 않고 정해진 자리에 덮어씀
             try? FileManager.default.createDirectory(at: dataDir, withIntermediateDirectories: true)
             try? text.write(to: dataDir.appendingPathComponent("daily_log.csv"), atomically: true, encoding: .utf8)

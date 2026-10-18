@@ -67,6 +67,9 @@ select{padding:7px 9px;border:1px solid var(--line);border-radius:8px;background
 .no{font-variant-numeric:tabular-nums;font-weight:700;color:var(--ink);font-size:15px}
 .badge{font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px;border:1px solid currentColor;margin-left:8px}
 .s-Pass{color:var(--good)} .s-Good{color:var(--mid)} .s-Fail{color:var(--fail)} .s-NotYet{color:var(--not)}
+button.badge{background:none;cursor:pointer;font-family:inherit;line-height:1.5}
+.badge.ov{border-style:dashed} .badge.ov::after{content:" ✎";font-weight:400}
+[data-say]{cursor:pointer}
 .star{border:0;background:none;font-size:20px;cursor:pointer;color:var(--line);padding:0 0 0 6px;line-height:1}
 .star.on{color:var(--star)}
 .wrongtag{font-size:11px;color:var(--fail);border:1px solid var(--fail);border-radius:6px;padding:1px 6px;margin-left:6px}
@@ -194,6 +197,17 @@ td .badge{margin-left:0;white-space:nowrap} td .star{font-size:16px;padding:0}
       <b>단어장 CSV</b>: 구글 시트에서 파일 → 다운로드 → CSV. 번호·학습상태·주제·한자/표기·히라가나·한국어 뜻·예문·예문 한글뜻·한글 발음 열을 읽어 단어 목록을 교체해요.<br>
       <b>채점 CSV</b>: 테스트 결과에서 내보낸 CSV를 AI가 채점해 돌려준 파일(또는 채점표)을 넣으면 O/X를 테스트 기록에 반영하고, 틀린 단어는 오답 모음에 넣고 맞힌 단어는 빼요. △는 틀린 것으로 봐요.
     </div>
+    <div class="row" id="gradeDir" style="justify-content:space-between" hidden>
+      <span class="hint"><b>AI 채점 폴더</b>: 쓰기 테스트를 마치면 채점용 CSV가 <b>~/Library/Application Support/N3Words/grading/outbox</b>에 자동으로 생겨요. 채점된 CSV를 <b>inbox</b>에 넣어 두면 앱을 켜거나 창으로 돌아올 때 반영하고 <b>done</b>으로 옮겨요.</span>
+      <button class="btn" id="gradeOpen">폴더 열기</button>
+    </div>
+    <div class="row" id="stRow" style="justify-content:space-between" hidden>
+      <span class="hint" id="stInfo"></span>
+      <div class="row">
+        <button class="btn" id="stExport">시트 반영용 CSV 내보내기</button>
+        <button class="btn" id="stReset">모두 시트 값으로 되돌리기</button>
+      </div>
+    </div>
     <div class="row" style="justify-content:space-between">
       <span class="hint" id="dataInfo"></span>
       <div class="row">
@@ -217,7 +231,7 @@ td .badge{margin-left:0;white-space:nowrap} td .star{font-size:16px;padding:0}
       <button class="btn" id="speakBtn">듣기</button>
       <button class="btn" id="next">다음 →</button>
     </div>
-    <div class="keys" style="margin-top:10px"><kbd>←</kbd> <kbd>→</kbd> 이동 · <kbd>Space</kbd> 뜻 가리기 · <kbd>F</kbd> ★ 표시 · <kbd>S</kbd> 섞기 · <kbd>P</kbd> 듣기 · <kbd>Home</kbd> <kbd>End</kbd> 처음/끝 · <kbd>+</kbd> <kbd>−</kbd> 글자 크기 · <kbd>/</kbd> 찾기</div>
+    <div class="keys" style="margin-top:10px"><kbd>←</kbd> <kbd>→</kbd> 이동 · <kbd>Space</kbd> 뜻 가리기 · <kbd>F</kbd> ★ 표시 · <kbd>S</kbd> 섞기 · <kbd>P</kbd> 듣기 · <kbd>E</kbd> 예문 듣기 (<kbd>Shift</kbd>와 같이 누르면 천천히) · <kbd>1</kbd>–<kbd>4</kbd> 학습상태 Pass·Good·Fail·Not Yet · <kbd>Home</kbd> <kbd>End</kbd> 처음/끝 · <kbd>+</kbd> <kbd>−</kbd> 글자 크기 · <kbd>/</kbd> 찾기</div>
   </section>
 
   <!-- list -->
@@ -269,8 +283,23 @@ const DATA_VER = "__VER__";
 if(LS.get("dataVer", "") !== DATA_VER){ try{ localStorage.removeItem("n3v2_words"); }catch(e){} LS.set("source", "기본 단어장"); LS.set("dataVer", DATA_VER); }
 const STATUSES = ["Pass","Good","Fail","Not Yet"];
 const normStatus = s => /pass/i.test(s) ? "Pass" : /good/i.test(s) ? "Good" : /fail/i.test(s) ? "Fail" : "Not Yet";   // "1. Pass" → "Pass"
+const stSheet = s => `${STATUSES.indexOf(s) + 1}. ${s}`;   // "Pass" → "1. Pass" (시트 표기)
 let WORDS = LS.get("words", null) || DEFAULT_WORDS;
 WORDS.forEach(w => w.s = normStatus(w.s));
+// 앱에서 바꾼 학습상태. 단어장과 따로 두어 CSV를 다시 불러와도 남고, 시트가 같은 값으로 따라오면 지움
+let statusOv = LS.get("statusOv", {});   // {n: {s, at(바꾼 시각 ms)}}
+// WORDS에 학습상태 변경을 입힘. w.s0은 단어장(시트)의 값. 시트가 따라와서 지운 개수를 돌려줌
+function applyStatus(){
+  let caught = 0;
+  WORDS.forEach(w => {
+    if(w.s0 == null) w.s0 = w.s;
+    if(statusOv[w.n] && statusOv[w.n].s === w.s0){ delete statusOv[w.n]; caught++; }
+    w.s = statusOv[w.n] ? statusOv[w.n].s : w.s0;
+  });
+  if(caught) LS.set("statusOv", statusOv);
+  return caught;
+}
+applyStatus();
 let dataSource = LS.get("source", "기본 단어장");
 let stars = new Set(LS.get("stars", []));
 let wrong = new Set(LS.get("wrong", []));
@@ -358,7 +387,7 @@ function recordGrades(id, grades){
   LS.set("hist", hist);
   dayRec(dateKey(new Date(id))).t[id] = [grades.length, grades.filter(g => vOk(g[1])).length]; saveDays();
 }
-function recordTest(){ recordGrades(Date.parse(test.started), test.items.map(n => [n, test.grade[n].p + test.grade[n].m])); }
+function recordTest(){ recordGrades(Date.parse(test.started), test.items.map(n => [n, test.grade[n].p + test.grade[n].m])); sendOutbox(); }
 const dotsHTML = h => (h || []).slice(-5).map(x => `<span class="dot ${vOk(x[1]) ? "d-ok" : vNo(x[1]) ? "d-no" : "d-half"}" title="발음 ${x[1][0]} · 뜻 ${x[1][1]}"></span>`).join("");
 function recHTML(n){
   const h = hist[n]; if(!h || !h.length) return "";
@@ -401,7 +430,7 @@ function renderStudy(){
   card.className = "card" + (quiz ? " hidden" : "");
   card.innerHTML = `
     <div class="meta">
-      <div class="row" style="gap:0"><span class="no">No. ${w.n}</span><span class="badge ${stCls(w.s)}">${esc(w.s)}</span>${wrong.has(w.n) ? '<span class="wrongtag">오답</span>' : ""}<button class="star ${stars.has(w.n) ? "on" : ""}" id="starBtn" title="F">★</button></div>
+      <div class="row" style="gap:0"><span class="no">No. ${w.n}</span>${badgeHTML(w, 'id="stBtn"')}${wrong.has(w.n) ? '<span class="wrongtag">오답</span>' : ""}<button class="star ${stars.has(w.n) ? "on" : ""}" id="starBtn" title="F">★</button></div>
       <div>${esc(w.t)}${w.d ? " · " + esc(w.d) : ""}</div>
     </div>
     <div class="head">
@@ -417,7 +446,8 @@ function renderStudy(){
     ${w.memo ? `<div class="memo reveal">기출 ${esc(w.memo)}</div>` : ""}
     ${recHTML(w.n)}`;
   $("starBtn").onclick = e => { e.stopPropagation(); toggleStar(); };
-  if($("exJ")) $("exJ").onclick = () => speak(w.e);
+  $("stBtn").onclick = e => { e.stopPropagation(); setStatus(w.n, nextStatus(w.s)); renderStudy(); };
+  if($("exJ")) $("exJ").onclick = e => speak(w.e, e.shiftKey);
   fitWord();
   $("posText").textContent = `${idx+1} / ${deck.length}`;
   $("bar").style.width = ((idx+1)/deck.length*100) + "%";
@@ -446,14 +476,29 @@ function stepScale(d){
   scale = d ? SCALES[Math.max(0, Math.min(SCALES.length - 1, i))] : SCALES[(SCALES.indexOf(scale) + 1) % SCALES.length];
   applyScale();
 }
-function speak(text){
+// OS의 일본어 음성으로 읽음(Web Speech API). 고품질(Enhanced·Premium) 음성이 깔려 있으면 그걸 씀. slow면 천천히
+function jaVoice(){
+  const vs = speechSynthesis.getVoices().filter(v => /^ja/i.test(v.lang));
+  return vs.find(v => /enhanced|premium|拡張|高品質/i.test(v.name)) || vs.find(v => v.localService) || vs[0] || null;
+}
+function speak(text, slow){
   if(!text) return;
   if(!("speechSynthesis" in window)){ toast("이 브라우저는 읽어주기를 지원하지 않아요"); return; }
   speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text); u.lang = "ja-JP"; u.rate = 0.9;
+  const u = new SpeechSynthesisUtterance(text); u.lang = "ja-JP"; u.rate = slow ? 0.6 : 0.9;
+  const v = jaVoice(); if(v) u.voice = v;
   speechSynthesis.speak(u);
 }
 function move(d){ if(!deck.length) return; idx = (idx + d + deck.length) % deck.length; renderStudy(); }
+// 학습상태 바꾸기. 시트 값으로 돌아가면 변경 기록을 지움. 범위에서 빠지게 되어도 지금 묶음에서는 바로 빼지 않음
+function setStatus(n, s){
+  const w = byNo(n); if(!w || w.s === s) return;
+  if(s === w.s0) delete statusOv[n]; else statusOv[n] = {s, at:Date.now()};
+  w.s = s; LS.set("statusOv", statusOv);
+  toast(`No. ${n} 학습상태 ${s}${s === w.s0 ? " (시트와 같아요)" : ` · 시트는 ${w.s0}`}`);
+}
+const nextStatus = s => STATUSES[(STATUSES.indexOf(s) + 1) % STATUSES.length];
+const badgeHTML = (w, attr = "") => `<button class="badge ${stCls(w.s)}${w.s !== w.s0 ? " ov" : ""}" ${attr} title="눌러서 바꾸기${w.s !== w.s0 ? ` · 시트: ${esc(w.s0)}` : ""}">${esc(w.s)}</button>`;
 function toggleStar(){
   const w = deck[idx]; if(!w) return;
   stars.has(w.n) ? stars.delete(w.n) : stars.add(w.n);
@@ -542,7 +587,7 @@ function renderList(){
   $("lBody").innerHTML = listed.length ? listed.map(w => {
     return `<tr class="pick" data-n="${w.n}"><td>${w.n}</td><td class="w jp">${esc(w.w)}</td>
       <td><span class="jp">${esc(w.k)}</span><div class="corr">${esc(w.p)}</div></td><td class="mn">${esc(w.m)}</td>
-      <td><span class="badge ${stCls(w.s)}">${esc(w.s)}</span>${wrong.has(w.n) ? ' <span class="wrongtag">오답</span>' : ""}</td>
+      <td>${badgeHTML(w, `data-st="${w.n}"`)}${wrong.has(w.n) ? ' <span class="wrongtag">오답</span>' : ""}</td>
       <td>${esc(w.t)}</td><td class="corr">${esc(w.memo)}</td><td>${dotsHTML(hist[w.n])}</td>
       <td><button class="star ${stars.has(w.n) ? "on" : ""}" data-star="${w.n}">★</button></td></tr>`;
   }).join("") : `<tr><td colspan="9" class="empty">해당하는 단어가 없어요.</td></tr>`;
@@ -551,6 +596,8 @@ $("lQ").oninput = $("lSort").onchange = $("lAll").onchange = renderList;
 $("lBody").onclick = e => {
   const s = e.target.closest("[data-star]");
   if(s){ const n = +s.dataset.star; stars.has(n) ? stars.delete(n) : stars.add(n); LS.set("stars", [...stars]); s.classList.toggle("on"); return; }
+  const st = e.target.closest("[data-st]");
+  if(st){ const w = byNo(+st.dataset.st); setStatus(w.n, nextStatus(w.s)); st.outerHTML = badgeHTML(w, `data-st="${w.n}"`); return; }
   const tr = e.target.closest("tr.pick"); if(!tr) return;
   const q = $("lQ").value.trim(), all = $("lAll").checked, sort = $("lSort").value;
   deck = listed.slice(); shuffled = false;
@@ -598,8 +645,9 @@ function importCSV(rows, name){
     list.sort((a,b) => a.n - b.n);
     WORDS = list; dataSource = `${name} (${new Date().toLocaleDateString("ko-KR")})`;
     LS.set("words", WORDS); LS.set("source", dataSource);
+    const caught = applyStatus();
     buildDeck(); render(); renderDataInfo();
-    toast(`단어 ${list.length}개를 불러왔어요`);
+    toast(`단어 ${list.length}개를 불러왔어요${caught ? ` · 앱에서 바꾼 학습상태 ${caught}개는 시트에 반영돼 있어 정리했어요` : ""}`);
   } else if(["최종","발음 채점","뜻 채점","자가채점(발음)","자가채점(뜻)","자가채점"].some(k => col(k) >= 0)){
     importScore(body, get, k => col(k) >= 0);
   } else throw new Error("단어장이나 채점표 형식이 아니에요");
@@ -631,7 +679,40 @@ function importScore(body, get, has){
   LS.set("wrong", [...wrong]); render(); renderDataInfo();
   toast(`채점 ${grades.length}개 반영${cur ? " (지금 결과 화면)" : ""} · 오답 모음 ${add}개 추가, ${rem}개 제외`);
 }
-function renderDataInfo(){ $("dataInfo").textContent = `현재: ${dataSource} · ${WORDS.length}단어 · 오답 모음 ${wrong.size}개 · 테스트 기록 ${Object.keys(hist).length}개`; }
+/* AI 채점 폴더 (맥 앱): Application Support/N3Words/grading/ 의 outbox → AI → inbox → done */
+// 쓰기 테스트의 채점용 CSV를 outbox에 자동으로 써 둠. O/X를 고치면 같은 파일을 덮어씀
+function sendOutbox(){
+  if(native("n3grade") && test && test.done && !TYPES[typeOf(test)].o) native("n3grade").postMessage({op:"out", name:`test_raw_${Date.parse(test.started)}.csv`, text:testCSV()});
+}
+// 앱이 inbox에서 읽어 넘겨준 파일들을 차례로 반영. 반영한 파일은 done으로 옮기게 하고, 못 읽은 파일은 그대로 둠
+function gradeInbox(files){
+  const next = () => {
+    const f = files.shift(); if(!f) return;
+    try{ importCSV(parseCSV(f.text), f.name); native("n3grade").postMessage({op:"done", name:f.name}); }
+    catch(e){ toast(`inbox의 ${f.name} 파일을 읽지 못했어요: ${e.message}`); }
+    if(files.length) setTimeout(next, 2800);   // 토스트가 하나씩 보이도록
+  };
+  next();
+}
+if(native("n3grade")){ $("gradeDir").hidden = false; $("gradeOpen").onclick = () => native("n3grade").postMessage({op:"open"}); }
+function renderDataInfo(){
+  $("dataInfo").textContent = `현재: ${dataSource} · ${WORDS.length}단어 · 오답 모음 ${wrong.size}개 · 테스트 기록 ${Object.keys(hist).length}개`;
+  const n = Object.keys(statusOv).length;
+  $("stRow").hidden = !n;
+  $("stInfo").innerHTML = `<b>앱에서 바꾼 학습상태 ${n}개</b>: 구글 시트의 학습상태 열에 옮겨 적은 뒤 단어장 CSV를 다시 불러오면 자동으로 정리돼요.`;
+}
+// 바꾼 학습상태만 번호순으로. 학습상태 열은 시트 표기("1. Pass") 그대로
+$("stExport").onclick = () => {
+  const lines = [["번호","한자/표기","히라가나","시트 학습상태","바꾼 학습상태","바꾼 날짜"].join(",")];
+  Object.keys(statusOv).map(Number).sort((a, b) => a - b).forEach(n => {
+    const w = byNo(n), o = statusOv[n]; if(!w) return;
+    lines.push([n, w.w, w.k, stSheet(w.s0), stSheet(o.s), dateKey(new Date(o.at))].map(csvCell).join(","));
+  });
+  saveFile(`status_${dateKey()}.csv`, "﻿" + lines.join("\n"));
+};
+$("stReset").onclick = e => confirmTwice(e.currentTarget, "한 번 더 누르면 되돌려요", () => {
+  statusOv = {}; LS.set("statusOv", statusOv); applyStatus(); buildDeck(deck[idx]?.n); render(); renderDataInfo(); toast("학습상태를 시트 값으로 되돌렸어요");
+});
 $("drop").onclick = () => $("file").click();
 $("file").onchange = e => { handleFile(e.target.files[0]); e.target.value = ""; };
 ["dragenter","dragover"].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); document.body.classList.add("dragging"); }));
@@ -640,7 +721,7 @@ document.addEventListener("drop", e => { const f = e.dataTransfer?.files?.[0]; i
 $("restoreDefault").onclick = () => {
   WORDS = DEFAULT_WORDS; dataSource = "기본 단어장";
   try{ localStorage.removeItem("n3v2_words"); }catch(e){} LS.set("source", dataSource);
-  buildDeck(); render(); renderDataInfo(); toast("기본 단어장으로 되돌렸어요");
+  applyStatus(); buildDeck(); render(); renderDataInfo(); toast("기본 단어장으로 되돌렸어요");
 };
 $("clearWrong").onclick = e => confirmTwice(e.currentTarget, "한 번 더 누르면 비워요", () => {
   wrong.clear(); LS.set("wrong", []); render(); renderDataInfo(); toast("오답 모음을 비웠어요");
@@ -890,7 +971,7 @@ function renderReview(){
       <thead><tr><th>번호</th><th>단어</th>${F.map(f => `<th>${f.k === "p" ? "발음" : "뜻"} (내 답 / 정답)</th><th></th>`).join("")}</tr></thead>
       <tbody>${test.items.map(n => {
         const w = byNo(n) || {}, a = test.ans[n] || {};
-        return `<tr class="${gOk(test.grade[n]) ? "ok" : "no"}"><td>${n}</td><td class="w jp">${esc(w.w)}</td>${F.map(f => `
+        return `<tr class="${gOk(test.grade[n]) ? "ok" : "no"}"><td>${n}</td><td class="w jp" data-say="${n}" title="눌러서 듣기">${esc(w.w)}</td>${F.map(f => `
           <td><div class="mine">${esc(a[f.k]) || blank}</div><div class="corr">${f.k === "p" ? `${esc(w.p)} · <span class="jp">${esc(w.k)}</span>` : esc(w.m)}</div></td><td>${ox(n, f.k)}</td>`).join("")}</tr>`;
       }).join("")}</tbody>` : `
       <thead><tr><th>번호</th><th>문제</th><th>내 답</th><th>정답</th><th></th></tr></thead>
@@ -899,7 +980,7 @@ function renderReview(){
         const mine = T.o ? (a.c ? (byNo(a.c) || {})[T.o] : "") : a.p;
         return `<tr class="${gOk(test.grade[n]) ? "ok" : "no"}"><td>${n}</td><td class="${T.o && T.q === "w" ? "jp" : ""}">${esc(T.o ? qText(w, type) : w.m)}</td>
           <td class="mine ${T.o === "m" ? "" : "jp"}">${esc(mine) || blank}</td>
-          <td><div class="jp"><b>${esc(w.w)}</b> · ${esc(w.k)}</div><div class="corr">${esc(w.p)} · ${esc(w.m)}</div></td><td>${ox(n, T.dim)}</td></tr>`;
+          <td><div class="jp" data-say="${n}" title="눌러서 듣기"><b>${esc(w.w)}</b> · ${esc(w.k)}</div><div class="corr">${esc(w.p)} · ${esc(w.m)}</div></td><td>${ox(n, T.dim)}</td></tr>`;
       }).join("")}</tbody>`;
   box.innerHTML = `
     <div class="panel">
@@ -916,6 +997,7 @@ function renderReview(){
     </div>
     <div class="tbl"><table>${table}</table></div>`;
   box.querySelectorAll(".ox button").forEach(b => b.onclick = () => { test.grade[+b.dataset.n][b.dataset.k] = b.dataset.v; recordTest(); saveTest(); renderReview(); });
+  box.querySelectorAll("[data-say]").forEach(el => el.onclick = e => { const w = byNo(+el.dataset.say); if(w) speak(w.k || w.w, e.shiftKey); });
   if($("rExport")) $("rExport").onclick = exportCSV;
   $("rWrong").onclick = () => {
     let add = 0, rem = 0;
@@ -931,15 +1013,18 @@ function renderReview(){
 }
 function csvCell(v){ v = String(v ?? ""); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
 // 적은 답 그대로 내보냄. 정답과 테스트ID를 같이 넣어, AI가 채점 열만 고쳐 돌려주면 다시 불러올 수 있음
-function exportCSV(){
+function testCSV(){
   const recall = typeOf(test) === "recall", id = Date.parse(test.started);
   const head = recall ? ["구분(불필요)","번호","문제(뜻)","내 답","자가채점","정답 표기","정답 히라가나","정답 발음","테스트ID"]
     : ["구분(불필요)","번호","한자/표기","한글 발음","뜻","자가채점(발음)","자가채점(뜻)","정답 히라가나","정답 발음","정답 뜻","테스트ID"];
   const lines = [head.join(",")];
   test.items.forEach((n, i) => { const w = byNo(n) || {}, a = test.ans[n] || {}, g = test.grade[n] || {};
     lines.push((recall ? [i+1, n, w.m, a.p, g.p, w.w, w.k, w.p, id] : [i+1, n, w.w, a.p, a.m, g.p, g.m, w.k, w.p, w.m, id]).map(csvCell).join(",")); });
+  return "\ufeff" + lines.join("\n");
+}
+function exportCSV(){
   const d = new Date(), pad = x => String(x).padStart(2, "0");
-  saveFile(`test_raw_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.csv`, "\ufeff" + lines.join("\n"));
+  saveFile(`test_raw_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.csv`, testCSV());
 }
 // 맥 앱(WKWebView)에서는 저장 창을 띄우고, 브라우저에서는 다운로드
 function saveFile(name, text){
@@ -990,7 +1075,8 @@ function render(){
 function setMode(m){ mode = m; LS.set("mode", m); render(); }
 Object.keys(MODES).forEach(m => $(MODES[m][0]).onclick = () => setMode(m));
 $("sizeBtn").onclick = () => stepScale(0);
-$("speakBtn").onclick = () => { const w = deck[idx]; if(w) speak(w.k || w.w); };
+$("speakBtn").onclick = e => { const w = deck[idx]; if(w) speak(w.k || w.w, e.shiftKey); };
+function speakEx(slow){ const w = deck[idx]; if(w && w.e) speak(w.e, slow); else toast("예문이 없는 단어예요"); }
 $("prev").onclick = () => move(-1);
 $("next").onclick = () => move(1);
 $("hideBtn").onclick = () => { quiz = !quiz; renderStudy(); };
@@ -1020,7 +1106,9 @@ document.addEventListener("keydown", e => {
   }
   if(mode !== "study") return;
   switch(e.key){
-    case "p": case "P": case "ㅔ": $("speakBtn").click(); break;
+    case "p": case "P": case "ㅔ": case "ㅖ": { const w = deck[idx]; if(w) speak(w.k || w.w, e.shiftKey); break; }
+    case "e": case "E": case "ㄷ": case "ㄸ": speakEx(e.shiftKey); break;
+    case "1": case "2": case "3": case "4": { const w = deck[idx]; if(w){ setStatus(w.n, STATUSES[e.key - 1]); renderStudy(); } break; }
     case "ArrowRight": case "ArrowDown": e.preventDefault(); move(1); break;
     case "ArrowLeft": case "ArrowUp": e.preventDefault(); move(-1); break;
     case " ": e.preventDefault(); quiz = !quiz; renderStudy(); break;
@@ -1038,6 +1126,7 @@ if(!MODES[mode]) mode = "study";
 buildDeck(LS.get("pos", null));
 applyScale();
 render();
+if(native("n3grade")) native("n3grade").postMessage({op:"scan"});   // 켤 때 inbox 확인 (창으로 돌아올 때는 앱이 알아서 확인)
 window.addEventListener("resize", fitWord);
 if(document.fonts && document.fonts.ready) document.fonts.ready.then(fitWord);
 </script>
