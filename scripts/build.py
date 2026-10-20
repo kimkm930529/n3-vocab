@@ -3,7 +3,7 @@
 
 사용법:  python3 scripts/build.py
 """
-import csv, hashlib, json, re, shutil, subprocess
+import argparse, csv, hashlib, json, re, shutil, subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -34,6 +34,9 @@ def load_words():
     return sorted(words, key=lambda w: w["n"])
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--web-only", action="store_true", help="Swift 컴파일 없이 웹 앱만 빌드")
+    args = parser.parse_args()
     words = load_words()
     data = json.dumps(words, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     state_js = (ROOT / "src" / "state.js").read_text(encoding="utf-8")
@@ -42,6 +45,12 @@ def main():
     sync_js = json.dumps(sync_gs, ensure_ascii=False).replace("</", "<\\/")
     html = (ROOT / "src" / "index.template.html").read_text(encoding="utf-8").replace("/*__STATE_JS__*/", state_js).replace("__SYNC_GS__", sync_js) \
         .replace("__VER__", hashlib.sha1(data.encode()).hexdigest()[:10]).replace("__DATA__", data)
+
+    if args.web_only:
+        DIST.mkdir(parents=True, exist_ok=True)
+        build_web(html)
+        print(f"단어 {len(words)}개 → dist/web/ (모바일 PWA)")
+        return
 
     shutil.rmtree(DIST, ignore_errors=True)
     (APP / "Contents" / "MacOS").mkdir(parents=True)
@@ -61,7 +70,8 @@ def main():
     print(f"단어 {len(words)}개 → {DIST.relative_to(ROOT)}/ (index.html, {APP.name}, N3_단어_app.zip, web/, sync.gs)")
 
 MANIFEST = {
-    "name": "N3 단어", "short_name": "N3 단어", "lang": "ko", "start_url": "./", "scope": "./", "display": "standalone",
+    "id": "./", "name": "N3 단어", "short_name": "N3 단어", "lang": "ko", "start_url": "./", "scope": "./", "display": "standalone",
+    "description": "카드·듣기·테스트로 익히는 JLPT N3 단어장",
     "background_color": "#f3f4f6", "theme_color": "#f3f4f6",
     "icons": [{"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
               {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"}],
@@ -69,15 +79,19 @@ MANIFEST = {
 # 처음 열 때 앱 파일을 담아 두고 오프라인에서도 열리게 함. 앱이 바뀌면 CACHE 이름이 바뀌어 새로 받음
 SW = """const CACHE = "n3-__HASH__";
 const FILES = ["./", "index.html", "manifest.webmanifest", "icon-180.png", "icon-192.png", "icon-512.png"];
-self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES))); self.skipWaiting(); });
+self.addEventListener("install", e => {
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES.map(url => new Request(url, {cache:"reload", credentials:"same-origin"})))).then(() => self.skipWaiting()));
+});
 self.addEventListener("activate", e => {
-  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith("n3-") && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
 self.addEventListener("fetch", e => {
   const req = e.request, url = new URL(req.url);
   if(req.method !== "GET") return;   // 동기화(POST)는 그대로 보냄
-  if(url.origin === location.origin){
-    e.respondWith(caches.match(req.mode === "navigate" ? "index.html" : req).then(r => r || fetch(req)));
+  // 앱 파일만 저장. 로그인·인증 경로나 다른 서버 요청은 가로채지 않음.
+  const appFiles = FILES.map(file => new URL(file, self.registration.scope).href);
+  if(appFiles.includes(url.origin + url.pathname)){
+    e.respondWith(caches.open(CACHE).then(c => c.match(req.mode === "navigate" ? "index.html" : url.origin + url.pathname)).then(r => r || fetch(req)));
   } else if(/fonts\\.(googleapis|gstatic)\\.com$/.test(url.hostname)){
     // 글꼴은 받은 것을 쓰고 뒤에서 새로 받아 둠
     e.respondWith(caches.open(CACHE).then(c => c.match(req).then(hit => {
@@ -91,7 +105,7 @@ self.addEventListener("fetch", e => {
 def build_web(html):
     """dist/web/: 정적 호스팅(Cloudflare Pages·Netlify 등)에 그대로 올리는 폰용 PWA"""
     web = DIST / "web"
-    web.mkdir(parents=True)
+    web.mkdir(parents=True, exist_ok=True)
     (web / "index.html").write_text(html, encoding="utf-8")
     (web / "manifest.webmanifest").write_text(json.dumps(MANIFEST, ensure_ascii=False, indent=1), encoding="utf-8")
     (web / "sw.js").write_text(SW.replace("__HASH__", hashlib.sha1(html.encode()).hexdigest()[:10]), encoding="utf-8")
