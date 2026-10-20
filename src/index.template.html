@@ -102,7 +102,8 @@ button.badge{background:none;cursor:pointer;font-family:inherit;line-height:1.5}
 .hint-reveal{display:none;text-align:center;color:var(--sub);font-size:14px}
 .hidden .hint-reveal{display:block}
 .nav{display:flex;gap:10px;justify-content:center}
-.more{display:none}.morepop{display:contents}
+.minibar{display:contents}.fab .ic{display:none}
+#prev,#tPrev{order:1} #hideBtn{order:2} #shuffleBtn,#tQuit{order:3} #modeBtn,#tPerBtn{order:4} #speakBtn{order:5} #next,#tNext{order:6}
 .keys{font-size:12px;color:var(--sub);text-align:center;line-height:1.9}
 kbd{font-family:inherit;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 6px;background:var(--card);font-size:11px}
 .empty{text-align:center;color:var(--sub);padding:50px 0;line-height:1.8}
@@ -177,31 +178,7 @@ td .badge{margin-left:0;white-space:nowrap} td .star{font-size:16px;padding:0}
 .opt.miss{border-color:var(--fail);box-shadow:0 0 0 2px var(--fail);background:var(--no-bg)}
 @media (max-width:560px){.card{padding:20px 16px}.answers,.opts{grid-template-columns:1fr}.keys{display:none}
   /* 폰: 탭을 좁게, 5개씩 쓰기는 한 줄에 하나씩 */
-  .tab{padding:7px 12px} .lbl-d{display:none}
-  /* 엄지 영역: 학습·테스트 버튼을 오른쪽 아래 모서리에 반투명 알약으로 띄움 (왼손잡이는 왼쪽 아래).
-     키보드가 올라오면 --kb만큼 같이 올라감 */
-  #study,#test{padding-bottom:104px}
-  .nav.dock{position:fixed;z-index:5;bottom:calc(12px + var(--kb,0px) + env(safe-area-inset-bottom));right:max(12px, env(safe-area-inset-right));left:auto;margin:0!important;
-    width:auto;max-width:calc(100vw - 24px);gap:4px;padding:5px;border-radius:999px;align-items:center;justify-content:flex-end;
-    background:var(--card);border:1px solid var(--line);box-shadow:0 6px 24px rgba(0,0,0,.18);transition:opacity .25s}
-  @supports (backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px)){
-    .nav.dock{background:color-mix(in srgb,var(--card) 80%,transparent);-webkit-backdrop-filter:blur(14px) saturate(1.4);backdrop-filter:blur(14px) saturate(1.4)}}
-  body.left .nav.dock{right:auto;left:max(12px, env(safe-area-inset-left));flex-direction:row-reverse}
-  .nav.dock .btn{flex:none;min-width:44px;height:44px;min-height:0;padding:0 14px;border-radius:999px;border-color:transparent;background:transparent;font-size:14px;white-space:nowrap}
-  .nav.dock .btn:active{background:var(--soft)}
-  .nav.dock .btn.icon{padding:0;width:44px;font-size:17px}
-  .nav.dock .more{display:inline-block;font-size:20px;line-height:1}
-  .nav.dock .btn.main{height:48px;padding:0 22px;background:var(--accent);color:var(--accent-ink);font-weight:700;border-color:var(--accent)}
-  .nav.dock .btn.main:active{filter:brightness(.92)}
-  .nav.dock .btn:disabled{opacity:.3}
-  .nav.dock.idle{opacity:.7}
-  /* ⋯ 메뉴: 자주 쓰지 않는 버튼은 알약 위로 펼침 */
-  .morepop{display:none;position:absolute;bottom:calc(100% + 8px);right:0;flex-direction:column;gap:2px;min-width:190px;padding:6px;
-    background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.2)}
-  body.left .morepop{right:auto;left:0}
-  .nav.open .morepop{display:flex}
-  .nav.dock .morepop .btn{display:block;width:100%;height:44px;text-align:left;border-radius:10px;font-size:14px}
-  .nav.dock .morepop .btn.on{font-weight:700;color:var(--accent)}
+  .tab{padding:7px 12px}
   .qgrid{grid-template-columns:1fr}.qgrid .qw{margin-top:8px}
   .search{min-width:0}
   .wrap{min-width:0} .tabs{width:100%} .tab{flex:1;min-height:44px;padding:7px 8px}
@@ -212,6 +189,33 @@ td .badge{margin-left:0;white-space:nowrap} td .star{font-size:16px;padding:0}
   /* 도움말 창은 아래에서 올라오는 시트로, 토스트는 아래 버튼을 가리지 않게 */
   .modal{align-items:flex-end;padding:0} .modal>.box{border-radius:16px 16px 0 0;max-height:92vh;padding-bottom:max(22px, env(safe-area-inset-bottom))}
   .toast{bottom:calc(96px + env(safe-area-inset-bottom))}}
+/* 폰·터치 기기: 엄지 영역 배치. 자주 누르는 다음·뜻·듣기는 동그란 아이콘으로 모서리에 띄우고,
+   이전·섞기·숨김 모드는 아래쪽에 작게. 왼손잡이면 좌우 반전. 키보드가 올라오면 --kb만큼 같이 올라감 */
+@media (max-width:560px), (pointer:coarse) and (max-width:900px){
+  #study,#test{padding-bottom:190px}
+  .nav{--b:calc(14px + var(--kb,0px) + env(safe-area-inset-bottom));--s:max(14px, env(safe-area-inset-right))}
+  .fab,.minibar{position:fixed;z-index:5;margin:0}
+  .fab{--p:var(--s);right:var(--p);bottom:var(--b);width:56px;height:56px;border-radius:50%;padding:0;display:flex;align-items:center;justify-content:center;
+    background:var(--card);border:1px solid var(--line);box-shadow:0 6px 20px rgba(0,0,0,.2);font-size:22px;line-height:1;min-height:0}
+  .fab .ic{display:inline}.fab .tx{display:none}
+  .fab:active{transform:scale(.94)}
+  .fab.main{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-size:26px;font-weight:700}
+  /* 엄지가 그리는 호를 따라 살짝 안쪽으로 휘게 */
+  #hideBtn.fab{width:48px;height:48px;font-size:20px;right:calc(var(--s) + 4px);bottom:calc(var(--b) + 66px)}
+  #speakBtn.fab{width:44px;height:44px;font-size:18px;right:calc(var(--s) + 14px);bottom:calc(var(--b) + 124px)}
+  .fab:disabled{opacity:.35}
+  body.left .fab{right:auto;left:var(--p)}
+  body.left #hideBtn.fab{left:calc(max(14px, env(safe-area-inset-left)) + 4px)} body.left #speakBtn.fab{left:calc(max(14px, env(safe-area-inset-left)) + 14px)}
+  body.left .fab.main{left:max(14px, env(safe-area-inset-left))}
+  .minibar{display:flex;gap:2px;padding:4px;border-radius:999px;bottom:var(--b);left:max(14px, env(safe-area-inset-left));right:auto;max-width:calc(100vw - 100px);
+    background:var(--card);border:1px solid var(--line);box-shadow:0 4px 16px rgba(0,0,0,.14)}
+  body.left .minibar{left:auto;right:max(14px, env(safe-area-inset-right))}
+  @supports (backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px)){
+    .minibar{background:color-mix(in srgb,var(--card) 78%,transparent);-webkit-backdrop-filter:blur(14px) saturate(1.4);backdrop-filter:blur(14px) saturate(1.4)}
+    .fab:not(.main){background:color-mix(in srgb,var(--card) 82%,transparent);-webkit-backdrop-filter:blur(14px) saturate(1.4);backdrop-filter:blur(14px) saturate(1.4)}}
+  .minibar .btn{min-height:0;height:36px;padding:0 11px;border-radius:999px;border-color:transparent;background:transparent;font-size:12.5px;white-space:nowrap}
+  .minibar .btn:active{background:var(--soft)} .minibar .btn:disabled{opacity:.3} .minibar .btn.on{color:var(--accent);font-weight:700}
+}
 </style>
 </head>
 <body>
@@ -342,16 +346,15 @@ td .badge{margin-left:0;white-space:nowrap} td .star{font-size:16px;padding:0}
   <!-- study -->
   <section id="study">
     <div class="card" id="card"></div>
-    <div class="nav dock" style="margin-top:14px">
-      <div class="morepop">
+    <div class="nav" style="margin-top:14px">
+      <div class="minibar">
+        <button class="btn" id="prev">← 이전</button>
         <button class="btn" id="shuffleBtn">섞기</button>
-        <button class="btn" id="modeBtn">뜻 숨김 모드</button>
+        <button class="btn" id="modeBtn">숨김 모드 켜기</button>
       </div>
-      <button class="btn icon more" aria-label="더보기" title="더보기">⋯</button>
-      <button class="btn icon" id="speakBtn" aria-label="듣기" title="듣기 (P)">🔊<span class="lbl-d"> 듣기</span></button>
-      <button class="btn" id="prev">← 이전</button>
-      <button class="btn" id="hideBtn">뜻 가리기</button>
-      <button class="btn main" id="next">다음 →</button>
+      <button class="btn fab" id="hideBtn" aria-label="뜻 가리기/보기"></button>
+      <button class="btn fab" id="speakBtn" aria-label="듣기" title="듣기 (P)"><span class="ic">🔊</span><span class="tx">듣기</span></button>
+      <button class="btn fab main" id="next" aria-label="다음"><span class="ic">→</span><span class="tx">다음 →</span></button>
     </div>
     <div class="keys" style="margin-top:10px"><kbd>←</kbd> <kbd>→</kbd> 이동 · <kbd>Space</kbd> 뜻 가리기 · <kbd>P</kbd> 듣기 · <kbd>E</kbd> 예문 듣기 · <kbd>1</kbd>–<kbd>4</kbd> 학습상태 · <kbd>F</kbd> ★ · <kbd>?</kbd> 모든 단축키</div>
   </section>
@@ -614,8 +617,9 @@ function renderStudy(){
   fitWord();
   $("posText").textContent = `${idx+1} / ${deck.length}`;
   $("bar").style.width = ((idx+1)/deck.length*100) + "%";
-  $("hideBtn").textContent = hideMode ? (quiz ? "뜻 보기" : "다시 가리기") : (quiz ? "뜻 보기" : "뜻 가리기");
-  $("modeBtn").textContent = hideMode ? "뜻 숨김 모드 끄기" : "뜻 숨김 모드 켜기"; $("modeBtn").classList.toggle("on", hideMode);
+  $("hideBtn").innerHTML = `<span class="ic">${quiz ? "👁" : "🙈"}</span><span class="tx">${quiz ? "뜻 보기" : hideMode ? "다시 가리기" : "뜻 가리기"}</span>`;
+  $("hideBtn").setAttribute("aria-label", quiz ? "뜻 보기" : "뜻 가리기");
+  $("modeBtn").textContent = hideMode ? "숨김 모드 끄기" : "숨김 모드 켜기"; $("modeBtn").classList.toggle("on", hideMode);
   $("shuffleBtn").textContent = shuffled ? "번호순" : "섞기";
   LS.set("pos", w.n); markSeen(w.n);
 }
@@ -1189,14 +1193,13 @@ function renderTest(){
   $("bar").style.width = ((start+page.length)/N*100) + "%";
   const meta = `<div class="meta"><span class="no">${type === "write" && per === 1 ? "No. " + w.n : per === 1 ? test.i + 1 + "번" : `${start+1}–${start+page.length}번`}</span><span>${type === "write" && per === 1 ? esc(w.t || "") : esc(typeLabel(type, test.ask))}</span></div>`;
   const nav = `
-    <div class="nav dock" style="margin-top:14px">
-      <div class="morepop">
+    <div class="nav" style="margin-top:14px">
+      <div class="minibar">
+        <button class="btn" id="tPrev" ${start ? "" : "disabled"}>← 이전</button>
         <button class="btn" id="tQuit">그만하고 채점</button>
         ${T.o ? "" : `<button class="btn" id="tPerBtn">${per === 1 ? "5개씩 보기" : "1개씩 보기"}</button>`}
       </div>
-      <button class="btn icon more" aria-label="더보기" title="더보기">⋯</button>
-      <button class="btn" id="tPrev" ${start ? "" : "disabled"}>← 이전</button>
-      <button class="btn main" id="tNext">${lastPage ? "제출" : "다음 →"}</button>
+      <button class="btn fab main" id="tNext" aria-label="${lastPage ? "제출" : "다음"}"><span class="ic">${lastPage ? "✓" : "→"}</span><span class="tx">${lastPage ? "제출" : "다음 →"}</span></button>
     </div>`;
   // 범위 설정을 바꿔도 진행 중인 테스트는 그대로라서, 새 범위로 넘어갈 길을 보여 줌
   const stale = test.scope !== JSON.stringify(scope) ? `
@@ -1594,16 +1597,7 @@ function setHideMode(on){
   toast(on ? "뜻 숨김 모드 켜짐: 넘기면 다음 카드는 다시 가려져요" : "뜻 숨김 모드 꺼짐");
 }
 $("hideBtn").onclick = () => { quiz = !quiz; renderStudy(); };
-$("modeBtn").onclick = () => { $("modeBtn").closest(".nav").classList.remove("open"); setHideMode(!hideMode); };
-// ⋯ 메뉴 열고 닫기(학습·테스트 공통). 다른 곳을 누르면 닫힘. 잠깐 안 만지면 알약이 흐려짐
-document.addEventListener("click", e => {
-  const more = e.target.closest(".nav .more"), nav = more && more.closest(".nav"), was = nav && nav.classList.contains("open");
-  document.querySelectorAll(".nav.open").forEach(n => n.classList.remove("open"));
-  if(nav && !was) nav.classList.add("open");
-}, true);
-let dockTimer;
-function wakeDock(){ document.querySelectorAll(".nav.dock").forEach(n => n.classList.remove("idle")); clearTimeout(dockTimer); dockTimer = setTimeout(() => document.querySelectorAll(".nav.dock").forEach(n => n.classList.add("idle")), 3500); }
-["touchstart","pointerdown","keydown","scroll"].forEach(t => addEventListener(t, wakeDock, {passive:true, capture:true})); wakeDock();
+$("modeBtn").onclick = () => setHideMode(!hideMode);
 // 폰 키보드가 알약을 가리지 않게
 if(window.visualViewport){
   const vv = visualViewport, fit = () => document.documentElement.style.setProperty("--kb", Math.max(0, innerHeight - vv.height - vv.offsetTop) + "px");
