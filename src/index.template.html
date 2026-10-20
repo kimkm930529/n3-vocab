@@ -192,17 +192,17 @@ td .badge{margin-left:0;white-space:nowrap} td .star{font-size:16px;padding:0}
 /* 폰·터치 기기: 엄지 영역 배치. 자주 누르는 다음·뜻·듣기는 동그란 아이콘으로 모서리에 띄우고,
    이전·섞기·숨김 모드는 아래쪽에 작게. 왼손잡이면 좌우 반전. 키보드가 올라오면 --kb만큼 같이 올라감 */
 @media (max-width:560px), (pointer:coarse) and (max-width:900px){
-  #study,#test{padding-bottom:190px}
-  .nav{--b:calc(14px + var(--kb,0px) + env(safe-area-inset-bottom));--s:max(14px, env(safe-area-inset-right))}
+  #study,#test{padding-bottom:250px}
+  .nav{--b:calc(14px + var(--kb,0px) + env(safe-area-inset-bottom));--s:max(14px, env(safe-area-inset-right));--lift:66px}   /* --lift: 둥근 버튼을 아래 막대보다 위로 띄워 엄지가 덜 꺾이게 */
   .fab,.minibar{position:fixed;z-index:5;margin:0}
-  .fab{--p:var(--s);right:var(--p);bottom:var(--b);width:56px;height:56px;border-radius:50%;padding:0;display:flex;align-items:center;justify-content:center;
+  .fab{--p:var(--s);right:var(--p);bottom:calc(var(--b) + var(--lift));width:56px;height:56px;border-radius:50%;padding:0;display:flex;align-items:center;justify-content:center;
     background:var(--card);border:1px solid var(--line);box-shadow:0 6px 20px rgba(0,0,0,.2);font-size:22px;line-height:1;min-height:0}
   .fab .ic{display:inline}.fab .tx{display:none}
   .fab:active{transform:scale(.94)}
   .fab.main{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-size:26px;font-weight:700}
   /* 엄지가 그리는 호를 따라 살짝 안쪽으로 휘게 */
-  #hideBtn.fab{width:48px;height:48px;font-size:20px;right:calc(var(--s) + 4px);bottom:calc(var(--b) + 66px)}
-  #speakBtn.fab{width:44px;height:44px;font-size:18px;right:calc(var(--s) + 14px);bottom:calc(var(--b) + 124px)}
+  #hideBtn.fab{width:48px;height:48px;font-size:20px;right:calc(var(--s) + 4px);bottom:calc(var(--b) + var(--lift) + 66px)}
+  #speakBtn.fab{width:44px;height:44px;font-size:18px;right:calc(var(--s) + 14px);bottom:calc(var(--b) + var(--lift) + 124px)}
   .fab:disabled{opacity:.35}
   body.left .fab{right:auto;left:var(--p)}
   body.left #hideBtn.fab{left:calc(max(14px, env(safe-area-inset-left)) + 4px)} body.left #speakBtn.fab{left:calc(max(14px, env(safe-area-inset-left)) + 14px)}
