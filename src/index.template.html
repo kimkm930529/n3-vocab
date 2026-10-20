@@ -102,6 +102,7 @@ button.badge{background:none;cursor:pointer;font-family:inherit;line-height:1.5}
 .hint-reveal{display:none;text-align:center;color:var(--sub);font-size:14px}
 .hidden .hint-reveal{display:block}
 .nav{display:flex;gap:10px;justify-content:center}
+.more{display:none}.morepop{display:contents}
 .keys{font-size:12px;color:var(--sub);text-align:center;line-height:1.9}
 kbd{font-family:inherit;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 6px;background:var(--card);font-size:11px}
 .empty{text-align:center;color:var(--sub);padding:50px 0;line-height:1.8}
@@ -175,14 +176,32 @@ td .badge{margin-left:0;white-space:nowrap} td .star{font-size:16px;padding:0}
 .opt.right{border-color:var(--good);box-shadow:0 0 0 2px var(--good);background:var(--ok-bg)}
 .opt.miss{border-color:var(--fail);box-shadow:0 0 0 2px var(--fail);background:var(--no-bg)}
 @media (max-width:560px){.card{padding:20px 16px}.answers,.opts{grid-template-columns:1fr}.keys{display:none}
-  /* 폰: 탭을 좁게, 학습·테스트 버튼은 화면 아래에 붙여 엄지로 누르기 쉽게, 5개씩 쓰기는 한 줄에 하나씩 */
-  .tab{padding:7px 12px}
-  #study .nav,#test .nav{position:sticky;bottom:0;z-index:1;background:var(--bg);padding:10px 0 max(6px, env(safe-area-inset-bottom))}
-  #study .nav,#test .nav{gap:6px} #study .nav .btn,#test .nav .btn{flex:1;min-width:0;padding:12px 2px;font-size:13px;white-space:nowrap}
-  /* 손잡이: 자주 누르는 다음·뜻 가리기를 엄지가 닿는 쪽 끝에 크게. 왼손잡이면 좌우를 뒤집음 */
-  body.left #study .nav,body.left #test .nav{flex-direction:row-reverse}
-  #shuffleBtn,#tQuit{order:1} #speakBtn,#tPerBtn{order:2} #prev,#tPrev{order:3} #hideBtn{order:4;flex:1.3!important} #next,#tNext{order:5;flex:1.8!important}
-  #next,#tNext{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+  /* 폰: 탭을 좁게, 5개씩 쓰기는 한 줄에 하나씩 */
+  .tab{padding:7px 12px} .lbl-d{display:none}
+  /* 엄지 영역: 학습·테스트 버튼을 오른쪽 아래 모서리에 반투명 알약으로 띄움 (왼손잡이는 왼쪽 아래).
+     키보드가 올라오면 --kb만큼 같이 올라감 */
+  #study,#test{padding-bottom:104px}
+  .nav.dock{position:fixed;z-index:5;bottom:calc(12px + var(--kb,0px) + env(safe-area-inset-bottom));right:max(12px, env(safe-area-inset-right));left:auto;margin:0!important;
+    width:auto;max-width:calc(100vw - 24px);gap:4px;padding:5px;border-radius:999px;align-items:center;justify-content:flex-end;
+    background:var(--card);border:1px solid var(--line);box-shadow:0 6px 24px rgba(0,0,0,.18);transition:opacity .25s}
+  @supports (backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px)){
+    .nav.dock{background:color-mix(in srgb,var(--card) 80%,transparent);-webkit-backdrop-filter:blur(14px) saturate(1.4);backdrop-filter:blur(14px) saturate(1.4)}}
+  body.left .nav.dock{right:auto;left:max(12px, env(safe-area-inset-left));flex-direction:row-reverse}
+  .nav.dock .btn{flex:none;min-width:44px;height:44px;min-height:0;padding:0 14px;border-radius:999px;border-color:transparent;background:transparent;font-size:14px;white-space:nowrap}
+  .nav.dock .btn:active{background:var(--soft)}
+  .nav.dock .btn.icon{padding:0;width:44px;font-size:17px}
+  .nav.dock .more{display:inline-block;font-size:20px;line-height:1}
+  .nav.dock .btn.main{height:48px;padding:0 22px;background:var(--accent);color:var(--accent-ink);font-weight:700;border-color:var(--accent)}
+  .nav.dock .btn.main:active{filter:brightness(.92)}
+  .nav.dock .btn:disabled{opacity:.3}
+  .nav.dock.idle{opacity:.7}
+  /* ⋯ 메뉴: 자주 쓰지 않는 버튼은 알약 위로 펼침 */
+  .morepop{display:none;position:absolute;bottom:calc(100% + 8px);right:0;flex-direction:column;gap:2px;min-width:190px;padding:6px;
+    background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.2)}
+  body.left .morepop{right:auto;left:0}
+  .nav.open .morepop{display:flex}
+  .nav.dock .morepop .btn{display:block;width:100%;height:44px;text-align:left;border-radius:10px;font-size:14px}
+  .nav.dock .morepop .btn.on{font-weight:700;color:var(--accent)}
   .qgrid{grid-template-columns:1fr}.qgrid .qw{margin-top:8px}
   .search{min-width:0}
   .wrap{min-width:0} .tabs{width:100%} .tab{flex:1;min-height:44px;padding:7px 8px}
@@ -192,7 +211,7 @@ td .badge{margin-left:0;white-space:nowrap} td .star{font-size:16px;padding:0}
   .badge{min-height:32px} .card{touch-action:pan-y}
   /* 도움말 창은 아래에서 올라오는 시트로, 토스트는 아래 버튼을 가리지 않게 */
   .modal{align-items:flex-end;padding:0} .modal>.box{border-radius:16px 16px 0 0;max-height:92vh;padding-bottom:max(22px, env(safe-area-inset-bottom))}
-  .toast{bottom:calc(84px + env(safe-area-inset-bottom))}}
+  .toast{bottom:calc(96px + env(safe-area-inset-bottom))}}
 </style>
 </head>
 <body>
@@ -322,14 +341,17 @@ td .badge{margin-left:0;white-space:nowrap} td .star{font-size:16px;padding:0}
 
   <!-- study -->
   <section id="study">
-    <label class="check hidemode" title="켜 두면 카드를 넘길 때마다 뜻이 다시 가려져요"><input type="checkbox" id="hideModeChk"> 뜻 숨김 모드 <span class="hint">(보고 넘어가도 다음 카드는 가려짐)</span></label>
     <div class="card" id="card"></div>
-    <div class="nav" style="margin-top:14px">
+    <div class="nav dock" style="margin-top:14px">
+      <div class="morepop">
+        <button class="btn" id="shuffleBtn">섞기</button>
+        <button class="btn" id="modeBtn">뜻 숨김 모드</button>
+      </div>
+      <button class="btn icon more" aria-label="더보기" title="더보기">⋯</button>
+      <button class="btn icon" id="speakBtn" aria-label="듣기" title="듣기 (P)">🔊<span class="lbl-d"> 듣기</span></button>
       <button class="btn" id="prev">← 이전</button>
       <button class="btn" id="hideBtn">뜻 가리기</button>
-      <button class="btn" id="shuffleBtn">섞기</button>
-      <button class="btn" id="speakBtn">듣기</button>
-      <button class="btn" id="next">다음 →</button>
+      <button class="btn main" id="next">다음 →</button>
     </div>
     <div class="keys" style="margin-top:10px"><kbd>←</kbd> <kbd>→</kbd> 이동 · <kbd>Space</kbd> 뜻 가리기 · <kbd>P</kbd> 듣기 · <kbd>E</kbd> 예문 듣기 · <kbd>1</kbd>–<kbd>4</kbd> 학습상태 · <kbd>F</kbd> ★ · <kbd>?</kbd> 모든 단축키</div>
   </section>
@@ -558,7 +580,7 @@ function scopeLabel(){
 /* ---------- study ---------- */
 function renderStudy(){
   const card = $("card");
-  $("scopeText").innerHTML = `범위 <b>${esc(deckLabel || scopeLabel())}</b>`;
+  $("scopeText").innerHTML = `범위 <b>${esc(deckLabel || scopeLabel())}</b>${hideMode ? " · 숨김 모드" : ""}`;
   if(!deck.length){
     card.className = "card";
     card.innerHTML = `<div class="empty">이 범위에 해당하는 단어가 없어요.<br>범위 설정에서 조건을 바꿔 보세요.</div>`;
@@ -593,7 +615,7 @@ function renderStudy(){
   $("posText").textContent = `${idx+1} / ${deck.length}`;
   $("bar").style.width = ((idx+1)/deck.length*100) + "%";
   $("hideBtn").textContent = hideMode ? (quiz ? "뜻 보기" : "다시 가리기") : (quiz ? "뜻 보기" : "뜻 가리기");
-  $("hideModeChk").checked = hideMode;
+  $("modeBtn").textContent = hideMode ? "뜻 숨김 모드 끄기" : "뜻 숨김 모드 켜기"; $("modeBtn").classList.toggle("on", hideMode);
   $("shuffleBtn").textContent = shuffled ? "번호순" : "섞기";
   LS.set("pos", w.n); markSeen(w.n);
 }
@@ -1167,11 +1189,14 @@ function renderTest(){
   $("bar").style.width = ((start+page.length)/N*100) + "%";
   const meta = `<div class="meta"><span class="no">${type === "write" && per === 1 ? "No. " + w.n : per === 1 ? test.i + 1 + "번" : `${start+1}–${start+page.length}번`}</span><span>${type === "write" && per === 1 ? esc(w.t || "") : esc(typeLabel(type, test.ask))}</span></div>`;
   const nav = `
-    <div class="nav" style="margin-top:14px">
+    <div class="nav dock" style="margin-top:14px">
+      <div class="morepop">
+        <button class="btn" id="tQuit">그만하고 채점</button>
+        ${T.o ? "" : `<button class="btn" id="tPerBtn">${per === 1 ? "5개씩 보기" : "1개씩 보기"}</button>`}
+      </div>
+      <button class="btn icon more" aria-label="더보기" title="더보기">⋯</button>
       <button class="btn" id="tPrev" ${start ? "" : "disabled"}>← 이전</button>
-      <button class="btn" id="tNext">${lastPage ? "제출" : "다음 →"}</button>
-      <button class="btn" id="tQuit">그만하고 채점</button>
-      ${T.o ? "" : `<button class="btn" id="tPerBtn">${per === 1 ? "5개씩 보기" : "1개씩 보기"}</button>`}
+      <button class="btn main" id="tNext">${lastPage ? "제출" : "다음 →"}</button>
     </div>`;
   // 범위 설정을 바꿔도 진행 중인 테스트는 그대로라서, 새 범위로 넘어갈 길을 보여 줌
   const stale = test.scope !== JSON.stringify(scope) ? `
@@ -1569,7 +1594,21 @@ function setHideMode(on){
   toast(on ? "뜻 숨김 모드 켜짐: 넘기면 다음 카드는 다시 가려져요" : "뜻 숨김 모드 꺼짐");
 }
 $("hideBtn").onclick = () => { quiz = !quiz; renderStudy(); };
-$("hideModeChk").onchange = e => setHideMode(e.target.checked);
+$("modeBtn").onclick = () => { $("modeBtn").closest(".nav").classList.remove("open"); setHideMode(!hideMode); };
+// ⋯ 메뉴 열고 닫기(학습·테스트 공통). 다른 곳을 누르면 닫힘. 잠깐 안 만지면 알약이 흐려짐
+document.addEventListener("click", e => {
+  const more = e.target.closest(".nav .more"), nav = more && more.closest(".nav"), was = nav && nav.classList.contains("open");
+  document.querySelectorAll(".nav.open").forEach(n => n.classList.remove("open"));
+  if(nav && !was) nav.classList.add("open");
+}, true);
+let dockTimer;
+function wakeDock(){ document.querySelectorAll(".nav.dock").forEach(n => n.classList.remove("idle")); clearTimeout(dockTimer); dockTimer = setTimeout(() => document.querySelectorAll(".nav.dock").forEach(n => n.classList.add("idle")), 3500); }
+["touchstart","pointerdown","keydown","scroll"].forEach(t => addEventListener(t, wakeDock, {passive:true, capture:true})); wakeDock();
+// 폰 키보드가 알약을 가리지 않게
+if(window.visualViewport){
+  const vv = visualViewport, fit = () => document.documentElement.style.setProperty("--kb", Math.max(0, innerHeight - vv.height - vv.offsetTop) + "px");
+  vv.addEventListener("resize", fit); vv.addEventListener("scroll", fit);
+}
 function applyHand(){
   document.body.classList.toggle("left", hand === "left");
   $("handBtn").textContent = hand === "left" ? "🤚 왼손잡이" : "🤚 오른손잡이";
